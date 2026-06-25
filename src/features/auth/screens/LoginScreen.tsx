@@ -140,3 +140,5 @@ export const LoginScreen = (): JSX.Element => {
     </AuthLayout>
   );
 };
+
+export default LoginScreen;

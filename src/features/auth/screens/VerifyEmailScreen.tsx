@@ -105,3 +105,5 @@ export const VerifyEmailScreen = (): JSX.Element => {
     </AuthLayout>
   );
 };
+
+export default VerifyEmailScreen;

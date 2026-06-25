@@ -186,3 +186,5 @@ export const SignupScreen = (): JSX.Element => {
     </AuthLayout>
   );
 };
+
+export default SignupScreen;

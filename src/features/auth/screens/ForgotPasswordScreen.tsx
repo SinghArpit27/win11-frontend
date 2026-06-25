@@ -86,3 +86,5 @@ export const ForgotPasswordScreen = (): JSX.Element => {
     </AuthLayout>
   );
 };
+
+export default ForgotPasswordScreen;

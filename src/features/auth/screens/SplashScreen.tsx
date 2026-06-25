@@ -51,3 +51,5 @@ export const SplashScreen = (): JSX.Element => {
     </div>
   );
 };
+
+export default SplashScreen;

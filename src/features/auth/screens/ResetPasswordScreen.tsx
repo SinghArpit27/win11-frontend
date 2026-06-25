@@ -144,3 +144,5 @@ export const ResetPasswordScreen = (): JSX.Element => {
     </AuthLayout>
   );
 };
+
+export default ResetPasswordScreen;

@@ -179,3 +179,5 @@ export const OtpVerifyScreen = (): JSX.Element => {
     </AuthLayout>
   );
 };
+
+export default OtpVerifyScreen;

@@ -67,3 +67,5 @@ export const OnboardingScreen = (): JSX.Element => {
     </div>
   );
 };
+
+export default OnboardingScreen;
