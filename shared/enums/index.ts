@@ -1,0 +1,484 @@
+/**
+ * Domain enums for the frontend build (import via `@shared/enums`).
+ * The backend keeps the authoritative copy in `backend/src/common/enums` —
+ * update both when adding new wire values.
+ */
+
+export enum UserRole {
+  USER = 'USER',
+  ADMIN = 'ADMIN',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  SUPPORT_AGENT = 'SUPPORT_AGENT',
+}
+
+export const ADMIN_ROLES: ReadonlyArray<UserRole> = [
+  UserRole.ADMIN,
+  UserRole.SUPER_ADMIN,
+  UserRole.SUPPORT_AGENT,
+] as const;
+
+export enum UserStatus {
+  ACTIVE = 'ACTIVE',
+  PENDING_VERIFICATION = 'PENDING_VERIFICATION',
+  SUSPENDED = 'SUSPENDED',
+  DELETED = 'DELETED',
+}
+
+export enum AuthProvider {
+  EMAIL = 'EMAIL',
+  PHONE = 'PHONE',
+  GOOGLE = 'GOOGLE',
+  APPLE = 'APPLE',
+}
+
+export enum SessionStatus {
+  ACTIVE = 'ACTIVE',
+  REVOKED = 'REVOKED',
+  EXPIRED = 'EXPIRED',
+  LOGGED_OUT = 'LOGGED_OUT',
+}
+
+export enum OtpPurpose {
+  SIGNUP_EMAIL = 'SIGNUP_EMAIL',
+  SIGNUP_PHONE = 'SIGNUP_PHONE',
+  LOGIN_2FA = 'LOGIN_2FA',
+  EMAIL_VERIFY = 'EMAIL_VERIFY',
+  PHONE_VERIFY = 'PHONE_VERIFY',
+  PASSWORD_RESET = 'PASSWORD_RESET',
+}
+
+export enum OtpChannel {
+  EMAIL = 'EMAIL',
+  SMS = 'SMS',
+}
+
+export enum ClientPlatform {
+  ANDROID = 'ANDROID',
+  IOS = 'IOS',
+  WEB = 'WEB',
+}
+
+export enum WalletTxType {
+  DEPOSIT = 'DEPOSIT',
+  WITHDRAW = 'WITHDRAW',
+  WITHDRAWAL_LOCK = 'WITHDRAWAL_LOCK',
+  WITHDRAWAL_RELEASE = 'WITHDRAWAL_RELEASE',
+  CONTEST_JOIN = 'CONTEST_JOIN',
+  CONTEST_REFUND = 'CONTEST_REFUND',
+  WINNING_CREDIT = 'WINNING_CREDIT',
+  BONUS_CREDIT = 'BONUS_CREDIT',
+  ADMIN_ADJUSTMENT = 'ADMIN_ADJUSTMENT',
+}
+
+export enum WalletTxStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  REVERSED = 'REVERSED',
+}
+
+export enum WalletBucket {
+  DEPOSIT = 'DEPOSIT',
+  WINNING = 'WINNING',
+  BONUS = 'BONUS',
+  LOCKED = 'LOCKED',
+}
+
+export enum LedgerDirection {
+  CREDIT = 'CREDIT',
+  DEBIT = 'DEBIT',
+}
+
+export enum WalletStatus {
+  ACTIVE = 'ACTIVE',
+  FROZEN = 'FROZEN',
+  CLOSED = 'CLOSED',
+}
+
+export enum PaymentProvider {
+  MANUAL = 'MANUAL',
+  RAZORPAY = 'RAZORPAY',
+  CASHFREE = 'CASHFREE',
+  PAYU = 'PAYU',
+  STRIPE = 'STRIPE',
+  UPI = 'UPI',
+}
+
+/** PHASE 9 — canonical payment record status. */
+export enum PaymentStatus {
+  CREATED = 'CREATED',
+  PENDING = 'PENDING',
+  AUTHORIZED = 'AUTHORIZED',
+  CAPTURED = 'CAPTURED',
+  FAILED = 'FAILED',
+  REFUNDED = 'REFUNDED',
+  EXPIRED = 'EXPIRED',
+  CANCELLED = 'CANCELLED',
+}
+
+/** PHASE 9 — withdrawal request lifecycle. */
+export enum WithdrawalStatus {
+  PENDING = 'PENDING',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  CANCELLED = 'CANCELLED',
+}
+
+/** PHASE 9 — KYC profile status. */
+export enum KycStatus {
+  PENDING = 'PENDING',
+  UNDER_REVIEW = 'UNDER_REVIEW',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum KycDocumentType {
+  PAN = 'PAN',
+  AADHAAR = 'AADHAAR',
+  BANK_PROOF = 'BANK_PROOF',
+}
+
+export enum PaymentAttemptStatus {
+  INITIATED = 'INITIATED',
+  PENDING = 'PENDING',
+  SUCCESS = 'SUCCESS',
+  FAILED = 'FAILED',
+  EXPIRED = 'EXPIRED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum AdminWalletActionType {
+  ADJUSTMENT_CREDIT = 'ADJUSTMENT_CREDIT',
+  ADJUSTMENT_DEBIT = 'ADJUSTMENT_DEBIT',
+  FREEZE = 'FREEZE',
+  UNFREEZE = 'UNFREEZE',
+  REFUND = 'REFUND',
+}
+
+/**
+ * Audit actions that the frontend needs to read (e.g. to label rows in
+ * the admin audit-log table). Mirror of the backend enum — keep in sync.
+ */
+export enum AuditAction {
+  USER_SIGNUP = 'USER_SIGNUP',
+  USER_LOGIN = 'USER_LOGIN',
+  USER_LOGIN_FAILED = 'USER_LOGIN_FAILED',
+  USER_LOGOUT = 'USER_LOGOUT',
+  USER_LOGOUT_ALL = 'USER_LOGOUT_ALL',
+  TOKEN_REFRESHED = 'TOKEN_REFRESHED',
+  TOKEN_REFRESH_REUSE = 'TOKEN_REFRESH_REUSE',
+  PASSWORD_CHANGED = 'PASSWORD_CHANGED',
+  PASSWORD_RESET_REQUESTED = 'PASSWORD_RESET_REQUESTED',
+  PASSWORD_RESET_COMPLETED = 'PASSWORD_RESET_COMPLETED',
+  EMAIL_VERIFIED = 'EMAIL_VERIFIED',
+  PHONE_VERIFIED = 'PHONE_VERIFIED',
+  OTP_REQUESTED = 'OTP_REQUESTED',
+  OTP_VERIFIED = 'OTP_VERIFIED',
+  OTP_FAILED = 'OTP_FAILED',
+  SESSION_REVOKED = 'SESSION_REVOKED',
+  SESSION_EXPIRED = 'SESSION_EXPIRED',
+  ADMIN_USER_UPDATED = 'ADMIN_USER_UPDATED',
+  ADMIN_USER_SUSPENDED = 'ADMIN_USER_SUSPENDED',
+  ADMIN_USER_REACTIVATED = 'ADMIN_USER_REACTIVATED',
+  ADMIN_ROLE_ASSIGNED = 'ADMIN_ROLE_ASSIGNED',
+  ADMIN_ROLE_REVOKED = 'ADMIN_ROLE_REVOKED',
+  ADMIN_SESSIONS_REVOKED = 'ADMIN_SESSIONS_REVOKED',
+  SUSPICIOUS_ACTIVITY = 'SUSPICIOUS_ACTIVITY',
+  RATE_LIMIT_HIT = 'RATE_LIMIT_HIT',
+  WALLET_CREATED = 'WALLET_CREATED',
+  WALLET_DEPOSIT = 'WALLET_DEPOSIT',
+  WALLET_WITHDRAW = 'WALLET_WITHDRAW',
+  WALLET_WITHDRAW_FAILED = 'WALLET_WITHDRAW_FAILED',
+  WALLET_CONTEST_JOIN = 'WALLET_CONTEST_JOIN',
+  WALLET_CONTEST_REFUND = 'WALLET_CONTEST_REFUND',
+  WALLET_WINNING_CREDIT = 'WALLET_WINNING_CREDIT',
+  WALLET_BONUS_CREDIT = 'WALLET_BONUS_CREDIT',
+  WALLET_TX_REVERSED = 'WALLET_TX_REVERSED',
+  WALLET_FROZEN = 'WALLET_FROZEN',
+  WALLET_UNFROZEN = 'WALLET_UNFROZEN',
+  ADMIN_WALLET_ADJUSTMENT = 'ADMIN_WALLET_ADJUSTMENT',
+  ADMIN_WALLET_REFUND = 'ADMIN_WALLET_REFUND',
+  SUSPICIOUS_FINANCIAL_ACTIVITY = 'SUSPICIOUS_FINANCIAL_ACTIVITY',
+}
+
+export enum AuditOutcome {
+  SUCCESS = 'SUCCESS',
+  FAILURE = 'FAILURE',
+}
+
+/**
+ * Mirror of backend `ContestStatus`. NEVER rename values — only add new
+ * ones. See `backend/src/common/enums/index.ts` for the canonical doc.
+ */
+export enum ContestStatus {
+  DRAFT = 'DRAFT',
+  SCHEDULED = 'SCHEDULED',
+  OPEN = 'OPEN',
+  FULL = 'FULL',
+  LOCKED = 'LOCKED',
+  LIVE = 'LIVE',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum MatchStatus {
+  UPCOMING = 'UPCOMING',
+  LIVE = 'LIVE',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+  ABANDONED = 'ABANDONED',
+}
+
+// ─── PHASE 4 — Sports domain (mirror of backend/common/enums) ────────────
+
+export enum Sport {
+  CRICKET = 'CRICKET',
+  FOOTBALL = 'FOOTBALL',
+  KABADDI = 'KABADDI',
+  BASKETBALL = 'BASKETBALL',
+}
+
+export enum MatchFormat {
+  T20 = 'T20',
+  ODI = 'ODI',
+  TEST = 'TEST',
+  T10 = 'T10',
+  HUNDRED = 'HUNDRED',
+  LEAGUE = 'LEAGUE',
+  KNOCKOUT = 'KNOCKOUT',
+  FRIENDLY = 'FRIENDLY',
+  STANDARD = 'STANDARD',
+}
+
+export enum TournamentStatus {
+  UPCOMING = 'UPCOMING',
+  ONGOING = 'ONGOING',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum PlayerRole {
+  BATSMAN = 'BATSMAN',
+  BOWLER = 'BOWLER',
+  ALL_ROUNDER = 'ALL_ROUNDER',
+  WICKET_KEEPER = 'WICKET_KEEPER',
+  GOALKEEPER = 'GOALKEEPER',
+  DEFENDER = 'DEFENDER',
+  MIDFIELDER = 'MIDFIELDER',
+  FORWARD = 'FORWARD',
+  GUARD = 'GUARD',
+  CENTER = 'CENTER',
+  RAIDER = 'RAIDER',
+  DEFENDER_KABADDI = 'DEFENDER_KABADDI',
+  ALL_ROUNDER_KABADDI = 'ALL_ROUNDER_KABADDI',
+  UNKNOWN = 'UNKNOWN',
+}
+
+export enum TeamSide {
+  HOME = 'HOME',
+  AWAY = 'AWAY',
+}
+
+export enum MatchUpdateType {
+  SCORE = 'SCORE',
+  STATUS = 'STATUS',
+  WICKET = 'WICKET',
+  GOAL = 'GOAL',
+  PERIOD = 'PERIOD',
+  TOSS = 'TOSS',
+  COMMENTARY = 'COMMENTARY',
+  GENERIC = 'GENERIC',
+}
+
+export enum SocketNamespace {
+  ROOT = '/',
+  MATCHES = '/matches',
+  LEADERBOARDS = '/leaderboards',
+  WALLETS = '/wallets',
+  NOTIFICATIONS = '/notifications',
+  ADMIN = '/admin',
+}
+
+export enum RealtimeEvent {
+  MATCH_UPDATE = 'match:update',
+  LEADERBOARD_UPDATED = 'leaderboard.updated',
+  LEADERBOARD_RANK_CHANGED = 'leaderboard.rankChanged',
+  LEADERBOARD_POINTS_CHANGED = 'leaderboard.pointsChanged',
+  CONTEST_JOINED = 'contest.joined',
+  CONTEST_FILLED = 'contest.filled',
+  CONTEST_LOCKED = 'contest.locked',
+  CONTEST_CANCELLED = 'contest.cancelled',
+  WALLET_UPDATED = 'wallet.updated',
+  WALLET_DEBITED = 'wallet.debited',
+  WALLET_CREDITED = 'wallet.credited',
+  DEPOSIT_COMPLETED = 'deposit.completed',
+  WITHDRAWAL_APPROVED = 'withdrawal.approved',
+  WITHDRAWAL_REJECTED = 'withdrawal.rejected',
+  KYC_APPROVED = 'kyc.approved',
+  KYC_REJECTED = 'kyc.rejected',
+  NOTIFICATION_NEW = 'notification.new',
+  NOTIFICATION_READ = 'notification.read',
+  ADMIN_METRICS = 'admin.metrics',
+}
+
+export enum SocketEvent {
+  CONNECT = 'connect',
+  DISCONNECT = 'disconnect',
+  AUTH = 'auth',
+  MATCH_UPDATE = 'match:update',
+  LEADERBOARD_UPDATE = 'leaderboard:update',
+  CONTEST_UPDATE = 'contest:update',
+  NOTIFICATION = 'notification',
+  JOIN_ROOM = 'room:join',
+  LEAVE_ROOM = 'room:leave',
+}
+
+export enum NotificationType {
+  SYSTEM = 'SYSTEM',
+  WALLET = 'WALLET',
+  CONTEST = 'CONTEST',
+  WINNINGS = 'WINNINGS',
+  MATCH = 'MATCH',
+  PROMOTION = 'PROMOTION',
+}
+
+// ─── PHASE 5 — Fantasy domain (mirror of backend/common/enums) ───────────
+
+export enum FantasyTeamStatus {
+  EDITABLE = 'EDITABLE',
+  LOCKED = 'LOCKED',
+  SCORED = 'SCORED',
+  INVALIDATED = 'INVALIDATED',
+}
+
+export enum FantasyScoringCategory {
+  BATTING = 'BATTING',
+  BOWLING = 'BOWLING',
+  FIELDING = 'FIELDING',
+  BONUS = 'BONUS',
+  PENALTY = 'PENALTY',
+}
+
+export enum FantasyValidationIssueCode {
+  TEAM_SIZE_MISMATCH = 'TEAM_SIZE_MISMATCH',
+  CREDITS_EXCEEDED = 'CREDITS_EXCEEDED',
+  ROLE_MIN_NOT_MET = 'ROLE_MIN_NOT_MET',
+  ROLE_MAX_EXCEEDED = 'ROLE_MAX_EXCEEDED',
+  TEAM_PLAYER_LIMIT_EXCEEDED = 'TEAM_PLAYER_LIMIT_EXCEEDED',
+  TEAM_PLAYER_LIMIT_NOT_MET = 'TEAM_PLAYER_LIMIT_NOT_MET',
+  DUPLICATE_PLAYER = 'DUPLICATE_PLAYER',
+  CAPTAIN_NOT_SELECTED = 'CAPTAIN_NOT_SELECTED',
+  VICE_CAPTAIN_NOT_SELECTED = 'VICE_CAPTAIN_NOT_SELECTED',
+  CAPTAIN_VICE_CAPTAIN_SAME = 'CAPTAIN_VICE_CAPTAIN_SAME',
+  CAPTAIN_NOT_IN_LINEUP = 'CAPTAIN_NOT_IN_LINEUP',
+  VICE_CAPTAIN_NOT_IN_LINEUP = 'VICE_CAPTAIN_NOT_IN_LINEUP',
+  PLAYER_NOT_FOUND = 'PLAYER_NOT_FOUND',
+  PLAYER_INACTIVE = 'PLAYER_INACTIVE',
+  PLAYER_NOT_IN_MATCH = 'PLAYER_NOT_IN_MATCH',
+  MATCH_LOCKED = 'MATCH_LOCKED',
+  MAX_TEAMS_PER_USER_REACHED = 'MAX_TEAMS_PER_USER_REACHED',
+  RULES_NOT_CONFIGURED = 'RULES_NOT_CONFIGURED',
+}
+
+export enum FantasyValidationSeverity {
+  ERROR = 'ERROR',
+  WARNING = 'WARNING',
+}
+
+// ─── PHASE 6 — Contest domain (mirror of backend/common/enums) ───────────
+
+export enum ContestType {
+  MEGA = 'MEGA',
+  GUARANTEED = 'GUARANTEED',
+  HEAD_TO_HEAD = 'HEAD_TO_HEAD',
+  PRACTICE = 'PRACTICE',
+  PRIVATE = 'PRIVATE',
+  REGULAR = 'REGULAR',
+}
+
+export enum ContestVisibility {
+  PUBLIC = 'PUBLIC',
+  PRIVATE = 'PRIVATE',
+  UNLISTED = 'UNLISTED',
+}
+
+export enum PrizeDistributionType {
+  RANK_BASED = 'RANK_BASED',
+  PERCENTAGE_BASED = 'PERCENTAGE_BASED',
+  FIXED = 'FIXED',
+}
+
+export enum ContestEntryStatus {
+  ACTIVE = 'ACTIVE',
+  REFUNDED = 'REFUNDED',
+  SETTLED = 'SETTLED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum ContestValidationIssueCode {
+  CONTEST_NOT_FOUND = 'CONTEST_NOT_FOUND',
+  CONTEST_NOT_OPEN = 'CONTEST_NOT_OPEN',
+  CONTEST_FULL = 'CONTEST_FULL',
+  CONTEST_LOCKED = 'CONTEST_LOCKED',
+  CONTEST_CANCELLED = 'CONTEST_CANCELLED',
+  CONTEST_NOT_JOINABLE = 'CONTEST_NOT_JOINABLE',
+  CONTEST_INVITE_CODE_REQUIRED = 'CONTEST_INVITE_CODE_REQUIRED',
+  CONTEST_INVITE_CODE_INVALID = 'CONTEST_INVITE_CODE_INVALID',
+  USER_ENTRY_LIMIT_REACHED = 'USER_ENTRY_LIMIT_REACHED',
+  TEAM_ALREADY_JOINED = 'TEAM_ALREADY_JOINED',
+  TEAM_INVALID_FOR_CONTEST = 'TEAM_INVALID_FOR_CONTEST',
+  TEAM_NOT_OWNED = 'TEAM_NOT_OWNED',
+  TEAM_LOCKED = 'TEAM_LOCKED',
+  WALLET_INSUFFICIENT = 'WALLET_INSUFFICIENT',
+  MATCH_LOCKED = 'MATCH_LOCKED',
+  MATCH_NOT_FOUND = 'MATCH_NOT_FOUND',
+}
+
+// ─── PHASE 7 — Scoring + Leaderboard (mirror of backend/common/enums) ────
+
+export enum ScoreEventType {
+  LIVE_TICK = 'LIVE_TICK',
+  FINAL_RECONCILE = 'FINAL_RECONCILE',
+  MANUAL_RECOMPUTE = 'MANUAL_RECOMPUTE',
+  POINTS_ADJUSTMENT = 'POINTS_ADJUSTMENT',
+  RULE_CHANGE = 'RULE_CHANGE',
+}
+
+export enum ScoreEventStatus {
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+}
+
+export enum ContestSettlementStatus {
+  NOT_STARTED = 'NOT_STARTED',
+  IN_PROGRESS = 'IN_PROGRESS',
+  SETTLED = 'SETTLED',
+  FAILED = 'FAILED',
+  SKIPPED = 'SKIPPED',
+}
+
+export enum LeaderboardScope {
+  CONTEST = 'CONTEST',
+  MATCH = 'MATCH',
+  USER = 'USER',
+}
+
+export enum RankMovement {
+  UP = 'UP',
+  DOWN = 'DOWN',
+  SAME = 'SAME',
+  NEW = 'NEW',
+}
+
+export enum LeaderboardSnapshotReason {
+  LIVE_TICK = 'LIVE_TICK',
+  PERIODIC = 'PERIODIC',
+  FINAL = 'FINAL',
+  MANUAL = 'MANUAL',
+}

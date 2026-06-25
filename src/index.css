@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Base CSS is intentionally minimal — every visual token lives behind a
+ * `--w11-*` CSS variable written by the Theme Engine. This file only
+ * resets, applies the active font / colours, and sets safe defaults.
+ *
+ * No brand colours, no hardcoded hex values, no per-component overrides.
+ */
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    /* Fallback so animations work even before the theme engine boots. */
+    --w11-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overscroll-behavior: none;
+  }
+
+  body {
+    font-family: var(--w11-font-sans);
+    background-color: var(--w11-color-bg);
+    color: var(--w11-color-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: var(--w11-color-primary-muted);
+    color: var(--w11-color-text);
+  }
+
+  button {
+    font-family: inherit;
+  }
+
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+    color: inherit;
+  }
+
+  /* Hide scrollbar but keep functionality on horizontal scrollers (mobile gallery patterns). */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  /* Themed scrollbars for desktop — subtle, never garish. */
+  @media (min-width: 1024px) {
+    *::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    *::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    *::-webkit-scrollbar-thumb {
+      background-color: var(--w11-color-border-strong);
+      border-radius: var(--w11-radius-pill);
+      border: 2px solid var(--w11-color-bg);
+    }
+    *::-webkit-scrollbar-thumb:hover {
+      background-color: var(--w11-color-primary);
+    }
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--w11-color-border-strong) transparent;
+    }
+  }
+
+  /* iOS / Android safe area helpers. */
+  .safe-pt {
+    padding-top: max(env(safe-area-inset-top), 0px);
+  }
+  .safe-pb {
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+}
+
+@layer utilities {
+  .text-display {
+    font-family: var(--w11-font-display);
+  }
+  .text-mono {
+    font-family: var(--w11-font-mono);
+  }
+
+  /* Glow ring around the focused primary CTA on touch devices. */
+  .ring-primary-glow {
+    box-shadow: var(--w11-shadow-glow);
+  }
+}
