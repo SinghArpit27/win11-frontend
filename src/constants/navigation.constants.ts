@@ -27,6 +27,6 @@ export interface UserNavItem {
 export const USER_NAV_ITEMS: ReadonlyArray<UserNavItem> = [
   { id: 'home', label: 'Home', to: ROUTES.HOME, icon: Home },
   { id: 'matches', label: 'Matches', to: ROUTES.MATCHES, icon: Trophy },
-  { id: 'contests', label: 'My Contests', to: ROUTES.MY_CONTESTS, icon: Users },
+  { id: 'contests', label: 'My Matches', to: ROUTES.MY_CONTESTS, icon: Users },
   { id: 'explore', label: 'Explore', to: ROUTES.EXPLORE, icon: Compass },
 ];

@@ -1,41 +1,33 @@
-import { ArrowLeft, CheckCircle2, ChevronRight, Clock, Lock, ShieldCheck, Users } from 'lucide-react';
-import { useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { CircleCheck } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
-import { Badge, Button, Card, Skeleton, Typography } from '@components/ui';
+import { PageContainer } from '@components/layout';
 import { QueryErrorState } from '@components/common/QueryErrorState';
+import { Skeleton } from '@components/ui';
 import { ROUTES } from '@constants/routes.constants';
-import { buildRoute } from '@utils/routes.util';
-import { cn } from '@utils/cn';
-
-import { formatRelative } from '@features/wallet/wallet.utils';
-
+import { useGetMatchDetailQuery } from '@features/sports/sports.api';
+import { useDream11Palette } from '@features/sports/hooks/useDream11Palette';
 import { ContestStatus } from '@shared/enums';
+import { buildRoute } from '@utils/routes.util';
 
-import { PrizeBreakdown, SpotsLeftBar } from '../components';
+import {
+  ContestDetailGloryBar,
+  ContestDetailLeaderboardPanel,
+  ContestDetailTabs,
+  ContestDetailWinningsPanel,
+  MatchFixtureBar,
+  type ContestDetailTabId,
+} from '../components';
 import {
   useGetContestQuery,
+  useListMyContestEntriesQuery,
   useListMyEntriesForContestQuery,
 } from '../contest.api';
-import {
-  STATUS_META,
-  TYPE_META,
-  formatPrizeCompact,
-  canJoinContest,
-  isFreeContest,
-  isJoinWindowOpen,
-} from '../contest.utils';
-import { formatMoney } from '@features/wallet/wallet.utils';
+import { canJoinContest } from '../contest.utils';
 
 /**
- * Contest detail screen.
- *
- *   Hero: prize-pool + countdown + sticky join CTA.
- *   Body: spots bar, key stats grid, prize breakdown, rules.
- *
- *  Pulls a single contest by id (cached + tagged) and the user's existing
- *  entries for that contest so we can render "You joined 2 / 5 teams"
- *  without an extra round-trip.
+ * Come-style contest detail — summary, JOIN, Glory bar, Winnings / Leaderboard tabs.
  */
 const ContestDetailScreen = (): JSX.Element => {
   const { matchId = '', contestId = '' } = useParams<{
@@ -43,34 +35,87 @@ const ContestDetailScreen = (): JSX.Element => {
     contestId: string;
   }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const palette = useDream11Palette();
 
-  const detailQuery = useGetContestQuery(
-    { contestId },
-    { skip: !contestId },
+  const initialTab = (searchParams.get('tab') as ContestDetailTabId | null) ?? 'winnings';
+  const [activeTab, setActiveTab] = useState<ContestDetailTabId>(
+    initialTab === 'leaderboard' ? 'leaderboard' : 'winnings',
   );
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'leaderboard' || tab === 'winnings') {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const matchQuery = useGetMatchDetailQuery({ matchId }, { skip: !matchId });
+  const detailQuery = useGetContestQuery({ contestId }, { skip: !contestId });
   const myEntriesQuery = useListMyEntriesForContestQuery(
     { contestId },
     { skip: !contestId },
   );
+  const matchEntriesQuery = useListMyContestEntriesQuery(
+    { matchId },
+    { skip: !matchId },
+  );
 
   const contest = detailQuery.data;
-  const joinedCount = myEntriesQuery.data?.length ?? 0;
-  const canJoin =
-    !!contest &&
-    canJoinContest(contest) &&
-    joinedCount < contest.maxEntriesPerUser;
-  const reachedMax = !!contest && joinedCount >= contest.maxEntriesPerUser;
+  const match = matchQuery.data;
 
-  const ctaLabel = useMemo(() => {
-    if (!contest) return 'Join';
-    if (contest.status === ContestStatus.FULL) return 'Contest Full';
-    if (contest.status === ContestStatus.LOCKED) return 'Locked';
-    if (contest.status === ContestStatus.CANCELLED) return 'Cancelled';
-    if (!isJoinWindowOpen(contest)) return 'Joining closed';
-    if (reachedMax) return 'Max teams joined';
-    if (isFreeContest(contest)) return 'Join FREE';
-    return `Join · ${formatMoney(contest.entryFee, { currency: contest.currency })}`;
-  }, [contest, reachedMax]);
+  const joinedCount = useMemo(() => {
+    const fromEntries = myEntriesQuery.data?.length ?? 0;
+    const fromContest = contest?.myActiveEntryCount ?? 0;
+    const fromMatch =
+      matchEntriesQuery.data?.items.filter((e) => e.contestId === contestId).length ?? 0;
+    return Math.max(fromEntries, fromContest, fromMatch);
+  }, [
+    myEntriesQuery.data,
+    contest?.myActiveEntryCount,
+    matchEntriesQuery.data,
+    contestId,
+  ]);
+
+  const hasJoined = joinedCount > 0;
+  const entriesLoading = myEntriesQuery.isLoading || matchEntriesQuery.isLoading;
+
+  const canJoin = useMemo(() => {
+    if (!contest || entriesLoading) return false;
+    if (hasJoined) return false;
+    return (
+      canJoinContest(contest) &&
+      contest.status !== ContestStatus.FULL &&
+      contest.spotsLeft > 0
+    );
+  }, [contest, hasJoined, entriesLoading]);
+
+  const joinLabel = useMemo(() => {
+    if (!contest) return 'JOIN';
+    if (hasJoined) return 'JOINED';
+    if (contest.status === ContestStatus.FULL || contest.spotsLeft === 0) return 'FULL';
+    return 'JOIN';
+  }, [contest, hasJoined]);
+
+  const handleBack = useCallback(() => {
+    navigate(buildRoute(ROUTES.MATCH_CONTESTS, { matchId }));
+  }, [matchId, navigate]);
+
+  const handleTabChange = useCallback(
+    (tab: ContestDetailTabId) => {
+      setActiveTab(tab);
+      const next = new URLSearchParams(searchParams);
+      if (tab === 'winnings') next.delete('tab');
+      else next.set('tab', tab);
+      setSearchParams(next, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const handleJoin = useCallback(() => {
+    if (!canJoin || !contest) return;
+    navigate(buildRoute(ROUTES.CONTEST_JOIN, { matchId, contestId: contest.id }));
+  }, [canJoin, contest, matchId, navigate]);
 
   if (detailQuery.isError) {
     return (
@@ -83,260 +128,94 @@ const ContestDetailScreen = (): JSX.Element => {
     );
   }
 
-  if (detailQuery.isLoading || !contest) {
-    return <DetailSkeleton />;
+  if (detailQuery.isLoading || matchQuery.isLoading || !contest || !match) {
+    return (
+      <PageContainer padded={false} width="wide" className="mx-0 max-w-none !px-0">
+        <Skeleton className="h-16 w-full rounded-none" />
+        <Skeleton className="h-44 w-full rounded-none" />
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="mx-4 mt-4 h-48 w-[calc(100%-2rem)] rounded-xl" />
+      </PageContainer>
+    );
   }
 
-  const status = STATUS_META[contest.status];
-  const type = TYPE_META[contest.type];
+  const left = Math.max(0, contest.totalSpots - contest.filledSpots);
+  const fillPct = Math.min(100, Math.max(0, Math.round(contest.fillPercentage)));
+  const isFull = contest.status === ContestStatus.FULL || left === 0;
 
   return (
-    <div className="relative flex flex-col gap-3 pb-28">
-      {/* Header */}
-      <header className="relative overflow-hidden bg-gradient-fantasy-header px-4 pb-5 pt-3 text-white">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            aria-label="Back"
-            className="rounded-full p-2 text-white/90 hover:bg-white/10"
+    <PageContainer
+      as="main"
+      padded={false}
+      width="wide"
+      className="mx-0 min-h-full w-full max-w-none !px-0 pb-10"
+      style={{ backgroundColor: palette.greyBg }}
+    >
+      <MatchFixtureBar match={match} onBack={handleBack} />
+
+      <section className="bg-white px-3 pb-4 pt-3">
+        {contest.isGuaranteed ? (
+          <div
+            className="mb-1 flex items-center gap-1 text-[11px] font-semibold leading-none"
+            style={{ color: '#2e7d32' }}
           >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <Badge
-            tone={status.tone}
-            className="text-[10px] uppercase tracking-wider"
-          >
-            {status.label}
-          </Badge>
-        </div>
-        <div className="mt-2 flex flex-col gap-1">
-          <Typography
-            variant="caption"
-            className={cn('text-[10px] font-bold uppercase tracking-wider', 'text-white/70')}
-          >
-            {type.label}
-          </Typography>
-          <Typography variant="h2" className="text-xl font-extrabold leading-tight">
-            {contest.name}
-          </Typography>
-          {contest.match && (
-            <Typography variant="caption" className="text-white/70">
-              {contest.match.homeTeam?.shortName} vs {contest.match.awayTeam?.shortName} ·{' '}
-              {formatRelative(contest.match.scheduledAt)}
-            </Typography>
+            <CircleCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Guaranteed
+          </div>
+        ) : null}
+
+        <h1 className="text-[20px] font-extrabold leading-tight" style={{ color: '#1a237e' }}>
+          {contest.name}
+        </h1>
+
+        <div className="mt-3 flex items-center justify-between text-[11px] font-semibold">
+          {isFull ? (
+            <span style={{ color: palette.red }}>Full</span>
+          ) : (
+            <span style={{ color: palette.red }}>{left} Left</span>
           )}
+          <span style={{ color: palette.textMuted }}>
+            {contest.totalSpots.toLocaleString('en-IN')} spots
+          </span>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <Stat
-            label="Prize Pool"
-            value={formatPrizeCompact(contest.prizePoolAmount, contest.currency)}
-          />
-          <Stat
-            label="Entry"
-            value={
-              isFreeContest(contest)
-                ? 'FREE'
-                : formatMoney(contest.entryFee, { currency: contest.currency })
-            }
-          />
-        </div>
-
-        <div className="mt-4">
-          <SpotsLeftBar
-            filled={contest.filledSpots}
-            total={contest.totalSpots}
-            fillPercentage={contest.fillPercentage}
-          />
-        </div>
-      </header>
-
-      <main className="flex flex-col gap-3 px-3 sm:px-4">
-        {/* Stat grid */}
-        <Card padding="md" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat
-            label="Top Prize"
-            value={formatPrizeCompact(contest.topPrize, contest.currency)}
-            light
-          />
-          <Stat
-            label="Winners"
-            value={contest.prizeSnapshot.maxWinningRank.toLocaleString('en-IN')}
-            light
-          />
-          <Stat
-            label="Spots"
-            value={contest.totalSpots.toLocaleString('en-IN')}
-            light
-          />
-          <Stat
-            label="Per User"
-            value={`Up to ${contest.maxEntriesPerUser}`}
-            light
-          />
-        </Card>
-
-        {/* Prize breakdown */}
-        <PrizeBreakdown snapshot={contest.prizeSnapshot} currency={contest.currency} />
-
-        {/* Rules */}
-        <Card padding="md" className="flex flex-col gap-2">
-          <Typography
-            variant="caption"
-            tone="muted"
-            className="text-[10px] font-bold uppercase tracking-wider"
-          >
-            Contest Rules
-          </Typography>
-          <Rule
-            Icon={Users}
-            text={`Max ${contest.maxEntriesPerUser} team${contest.maxEntriesPerUser > 1 ? 's' : ''} per user`}
-          />
-          {contest.isGuaranteed && (
-            <Rule Icon={ShieldCheck} text="Prize money is guaranteed — runs even if spots aren't full." />
-          )}
-          {contest.hasInviteCode && (
-            <Rule Icon={Lock} text="Private contest — joinable only with an invite code." />
-          )}
-          {contest.joinClosesAt && (
-            <Rule
-              Icon={Clock}
-              text={`Joining closes ${formatRelative(contest.joinClosesAt)}`}
-            />
-          )}
-          {!contest.isGuaranteed && (
-            <Rule
-              Icon={CheckCircle2}
-              text="Prize pool grows as more users join. Confirmed at the start of the contest."
-            />
-          )}
-        </Card>
-
-        {/* Leaderboard CTA — PHASE 7 — visible once the contest has at least
-            one entry; lives above "Your entries" so users can jump into live
-            ranks immediately. */}
-        {(joinedCount > 0 ||
-          contest.status === ContestStatus.LIVE ||
-          contest.status === ContestStatus.COMPLETED ||
-          contest.status === ContestStatus.LOCKED) && (
-          <Card padding="md" className="flex items-center justify-between gap-3">
-            <div>
-              <Typography variant="caption" tone="muted" className="block text-[10px] uppercase">
-                Live Leaderboard
-              </Typography>
-              <Typography variant="body" className="block font-bold">
-                {contest.status === ContestStatus.COMPLETED
-                  ? 'Final results & winnings'
-                  : 'Real-time ranks & projected winnings'}
-              </Typography>
-            </div>
-            <Button
-              variant="primary"
-              rightIcon={<ChevronRight className="h-4 w-4" />}
-              onClick={() =>
-                navigate(
-                  buildRoute(ROUTES.CONTEST_LEADERBOARD, { matchId, contestId: contest.id }),
-                )
-              }
-            >
-              View
-            </Button>
-          </Card>
-        )}
-
-        {/* My entries */}
-        {joinedCount > 0 && (
-          <Card padding="md" className="flex items-center justify-between gap-3">
-            <div>
-              <Typography variant="caption" tone="muted" className="block text-[10px] uppercase">
-                Your entries
-              </Typography>
-              <Typography variant="body" className="block font-bold">
-                {joinedCount} of {contest.maxEntriesPerUser} joined
-              </Typography>
-            </div>
-            <Button
-              variant="ghost"
-              rightIcon={<ChevronRight className="h-4 w-4" />}
-              onClick={() => navigate(ROUTES.MY_CONTESTS)}
-            >
-              View
-            </Button>
-          </Card>
-        )}
-      </main>
-
-      {/* Sticky CTA */}
-      <div className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-[640px] border-t border-border bg-surface/95 px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur sm:px-4">
-        <Button
-          variant="primary"
-          fullWidth
-          size="lg"
-          disabled={!canJoin}
-          onClick={() =>
-            navigate(buildRoute(ROUTES.CONTEST_JOIN, { matchId, contestId: contest.id }))
-          }
+        <div
+          className="mt-1.5 h-[3px] w-full overflow-hidden rounded-full"
+          style={{ backgroundColor: '#ececec' }}
         >
-          {ctaLabel}
-        </Button>
+          <div
+            className="h-full rounded-full"
+            style={{ width: `${fillPct}%`, backgroundColor: palette.red }}
+          />
+        </div>
+
+        <button
+          type="button"
+          disabled={!canJoin}
+          onClick={handleJoin}
+          className="mt-4 w-full rounded-[6px] py-3.5 text-[13px] font-bold uppercase tracking-wide text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-90"
+          style={{
+            backgroundColor: canJoin ? '#1a2332' : '#bdbdbd',
+          }}
+          aria-disabled={!canJoin}
+        >
+          {joinLabel}
+        </button>
+      </section>
+
+      <ContestDetailGloryBar />
+      <ContestDetailTabs active={activeTab} onChange={handleTabChange} />
+
+      <div className="bg-white">
+        {activeTab === 'winnings' ? (
+          <ContestDetailWinningsPanel contest={contest} />
+        ) : (
+          <ContestDetailLeaderboardPanel contestId={contest.id} />
+        )}
       </div>
-    </div>
+    </PageContainer>
   );
 };
-
-// ─── Pieces ────────────────────────────────────────────────────────────
-
-const Stat = ({
-  label,
-  value,
-  light = false,
-}: {
-  label: string;
-  value: string;
-  light?: boolean;
-}): JSX.Element => (
-  <div className="flex flex-col gap-1">
-    <span
-      className={cn(
-        'text-[10px] font-bold uppercase tracking-wider',
-        light ? 'text-text-muted' : 'text-white/70',
-      )}
-    >
-      {label}
-    </span>
-    <span
-      className={cn(
-        'text-base font-extrabold tabular-nums',
-        light ? 'text-text' : 'text-white',
-      )}
-    >
-      {value}
-    </span>
-  </div>
-);
-
-const Rule = ({
-  Icon,
-  text,
-}: {
-  Icon: typeof Users;
-  text: string;
-}): JSX.Element => (
-  <div className="flex items-start gap-2 text-sm">
-    <Icon className="mt-0.5 h-4 w-4 shrink-0 text-text-muted" aria-hidden />
-    <span className="text-text">{text}</span>
-  </div>
-);
-
-const DetailSkeleton = (): JSX.Element => (
-  <div className="flex flex-col gap-3 p-3">
-    <Skeleton className="h-44 w-full rounded-none" />
-    <Skeleton className="h-24 w-full rounded-2xl" />
-    <Skeleton className="h-60 w-full rounded-2xl" />
-    <Skeleton className="h-40 w-full rounded-2xl" />
-  </div>
-);
 
 export { ContestDetailScreen };
 export default ContestDetailScreen;

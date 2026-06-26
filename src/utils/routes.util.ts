@@ -26,3 +26,14 @@ export const buildCreateTeamRoute = (
   const query = params.toString();
   return query ? `${base}?${query}` : base;
 };
+
+/** After saving a team from a contest — open join confirmation on the match hub. */
+export const buildContestConfirmJoinRoute = (
+  matchId: string,
+  contestId: string,
+  teamId: string,
+): string => {
+  const base = buildRoute(ROUTES.MATCH_CONTESTS, { matchId });
+  const params = new URLSearchParams({ confirmJoin: contestId, teamId });
+  return `${base}?${params.toString()}`;
+};

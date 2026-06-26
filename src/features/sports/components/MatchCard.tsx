@@ -32,6 +32,8 @@ interface MatchCardProps {
   /** Dream11 light card for home / mobile match feeds. */
   appearance?: 'dream11' | 'default';
   prizeLabel?: string | null;
+  /** When set, replaces mega-contest badge in Dream11 footer (My Matches). */
+  participationLabel?: string | null;
   timeStyle?: MatchTimeStyle;
   onClick?: () => void;
   className?: string;
@@ -42,6 +44,7 @@ export const MatchCard = ({
   variant = 'default',
   appearance = 'dream11',
   prizeLabel,
+  participationLabel,
   timeStyle = 'countdown',
   onClick,
   className,
@@ -60,6 +63,7 @@ export const MatchCard = ({
         match={match}
         live={live}
         prizeLabel={prizeLabel}
+        participationLabel={participationLabel}
         timeStyle={timeStyle}
         onClick={handleClick}
         className={className}
@@ -90,6 +94,7 @@ const Dream11Card = ({
   match,
   live,
   prizeLabel,
+  participationLabel,
   timeStyle,
   onClick,
   className,
@@ -97,6 +102,7 @@ const Dream11Card = ({
   match: SportsMatchSummary;
   live: boolean;
   prizeLabel?: string | null;
+  participationLabel?: string | null;
   timeStyle: MatchTimeStyle;
   onClick: () => void;
   className?: string;
@@ -192,7 +198,14 @@ const Dream11Card = ({
 
       {/* Footer */}
       <div className="flex items-center justify-between gap-2 px-2.5 pb-2">
-        {completed ? (
+        {participationLabel ? (
+          <span
+            className="text-[11px] font-semibold"
+            style={{ color: palette.textPrimary }}
+          >
+            {participationLabel}
+          </span>
+        ) : completed ? (
           <span
             className="text-[11px] font-semibold"
             style={{ color: palette.completed }}
