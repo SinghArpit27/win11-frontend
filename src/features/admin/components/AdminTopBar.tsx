@@ -4,6 +4,7 @@ import { ThemeToggle } from '@components/layout';
 import { Typography } from '@components/ui';
 import { APP_NAME } from '@constants/app.constants';
 import { useAuth } from '@features/auth';
+import { resolveUserHandle } from '@features/auth/auth.utils';
 
 interface AdminTopBarProps {
   onOpenSidebar: () => void;
@@ -21,6 +22,7 @@ interface AdminTopBarProps {
  */
 export const AdminTopBar = ({ onOpenSidebar }: AdminTopBarProps): JSX.Element => {
   const { user, roles } = useAuth();
+  const handle = resolveUserHandle(user);
   return (
     <header className="sticky top-0 z-20 flex h-desktop-top-bar items-center gap-3 border-b border-border bg-bg-elevated/90 px-4 backdrop-blur-md lg:px-6">
       <button
@@ -43,7 +45,7 @@ export const AdminTopBar = ({ onOpenSidebar }: AdminTopBarProps): JSX.Element =>
               {roles.join(' · ')}
             </Typography>
             <Typography variant="body" className="text-sm font-semibold">
-              {user?.displayName ?? user?.email ?? user?.phone}
+              {handle}
             </Typography>
           </div>
           <ThemeToggle />

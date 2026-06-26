@@ -5,6 +5,7 @@ import { useLocation, useNavigate, useParams, useSearchParams } from 'react-rout
 import { Skeleton, Typography } from '@components/ui';
 import { ROUTES } from '@constants/routes.constants';
 import { cn } from '@utils/cn';
+import { buildRoute } from '@utils/routes.util';
 
 import {
   CaptainListRow,
@@ -53,6 +54,7 @@ const CaptainSelectionScreen = (): JSX.Element => {
   const [params] = useSearchParams();
   const editTeamId = params.get('editTeamId');
   const cloneTeamId = params.get('cloneTeamId');
+  const contestId = params.get('contestId');
 
   const navState = (location.state ?? {}) as LocationState;
   const [selections, setSelections] = useState<FantasyDraftSelection[]>(
@@ -157,14 +159,22 @@ const CaptainSelectionScreen = (): JSX.Element => {
       };
       if (editTeamId) {
         const team = await updateTeam({ teamId: editTeamId, ...payload }).unwrap();
-        navigate(
-          ROUTES.FANTASY_TEAM_DETAIL.replace(':matchId', matchId).replace(':teamId', team.id),
-        );
+        if (contestId) {
+          navigate(buildRoute(ROUTES.CONTEST_JOIN, { matchId, contestId }), { replace: true });
+        } else {
+          navigate(
+            ROUTES.FANTASY_TEAM_DETAIL.replace(':matchId', matchId).replace(':teamId', team.id),
+          );
+        }
       } else {
         const team = await createTeam(payload).unwrap();
-        navigate(
-          ROUTES.FANTASY_TEAM_DETAIL.replace(':matchId', matchId).replace(':teamId', team.id),
-        );
+        if (contestId) {
+          navigate(buildRoute(ROUTES.CONTEST_JOIN, { matchId, contestId }), { replace: true });
+        } else {
+          navigate(
+            ROUTES.FANTASY_TEAM_DETAIL.replace(':matchId', matchId).replace(':teamId', team.id),
+          );
+        }
       }
     } catch (err) {
       // RTK Query error shape after our envelope unwrapper:

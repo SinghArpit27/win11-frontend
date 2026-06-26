@@ -11,12 +11,17 @@ export const extractErrorMessage = (err: unknown): string => {
 
   if (typeof err === 'object') {
     const e = err as Partial<ApiFailure> & {
-      data?: ApiFailure;
+      data?: ApiFailure | { error?: { message?: string } };
       message?: string;
+      error?: string;
       status?: number | string;
     };
 
-    if (e.data?.error?.message) return e.data.error.message;
+    if (e.data && typeof e.data === 'object' && 'error' in e.data) {
+      const msg = (e.data as { error?: { message?: string } }).error?.message;
+      if (msg) return msg;
+    }
+    if (typeof e.error === 'string' && e.error.trim()) return e.error;
     if (e.message) return e.message;
   }
 

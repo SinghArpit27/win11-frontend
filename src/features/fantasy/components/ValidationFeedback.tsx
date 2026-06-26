@@ -6,42 +6,19 @@ import { cn } from '@utils/cn';
 
 import type { FantasyValidationResult } from '../fantasy.types';
 
-/**
- * Renders inline validation chips below the sticky action bar. Shows
- * the top N issues sorted by severity so the user always sees the most
- * critical problem first.
- *
- * Designed to be cheap to render — recomputes only when the result
- * reference changes (memo). Issue-free state collapses to a positive
- * "Team is ready" pill.
- */
 interface ValidationFeedbackProps {
   result: FantasyValidationResult | null | undefined;
   maxIssues?: number;
   className?: string;
 }
 
+/** Compact Dream11-style validation strip above the footer. */
 const ValidationFeedbackComponent = ({
   result,
-  maxIssues = 3,
+  maxIssues = 1,
   className,
 }: ValidationFeedbackProps): JSX.Element | null => {
-  if (!result) return null;
-
-  if (result.isValid) {
-    return (
-      <div
-        className={cn(
-          'flex items-center gap-2 rounded-full bg-success/15 px-3 py-1 text-xs font-semibold text-success',
-          className,
-        )}
-        role="status"
-      >
-        <span className="inline-block h-1.5 w-1.5 rounded-full bg-success" aria-hidden />
-        Team is ready to save
-      </div>
-    );
-  }
+  if (!result || result.isValid) return null;
 
   const sortedIssues = [...result.issues].sort((a, b) =>
     a.severity === FantasyValidationSeverity.ERROR && b.severity !== FantasyValidationSeverity.ERROR
@@ -51,39 +28,28 @@ const ValidationFeedbackComponent = ({
         : 0,
   );
   const visible = sortedIssues.slice(0, maxIssues);
+  const hiddenCount = sortedIssues.length - visible.length;
 
   return (
-    <ul
-      role="list"
-      aria-label="Team validation issues"
-      className={cn('flex flex-col gap-1.5', className)}
-    >
+    <div className={cn('px-3 py-2', className)} role="status" aria-live="polite">
       {visible.map((issue) => (
-        <li
+        <p
           key={`${issue.code}-${issue.message}`}
           className={cn(
-            'flex items-center gap-2 rounded-md px-3 py-1.5 text-xs',
+            'flex items-start gap-1.5 text-[11px] leading-snug',
             issue.severity === FantasyValidationSeverity.ERROR
-              ? 'bg-danger/10 text-danger'
-              : 'bg-warning/10 text-warning',
+              ? 'font-semibold text-[#e53935]'
+              : 'font-medium text-[#f57c00]',
           )}
         >
-          <span
-            aria-hidden
-            className={cn(
-              'inline-block h-1.5 w-1.5 rounded-full',
-              issue.severity === FantasyValidationSeverity.ERROR ? 'bg-danger' : 'bg-warning',
-            )}
-          />
+          <span aria-hidden className="mt-[5px] h-1 w-1 shrink-0 rounded-full bg-current" />
           {issue.message}
-        </li>
+        </p>
       ))}
-      {sortedIssues.length > visible.length ? (
-        <li className="px-3 text-[11px] text-text-muted">
-          +{sortedIssues.length - visible.length} more issue(s)
-        </li>
+      {hiddenCount > 0 ? (
+        <p className="mt-0.5 pl-2.5 text-[10px] text-[#9e9e9e]">+{hiddenCount} more issue(s)</p>
       ) : null}
-    </ul>
+    </div>
   );
 };
 

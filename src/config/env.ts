@@ -34,8 +34,8 @@ const envSchema = z.object({
   VITE_SOCKET_PATH: z.string().startsWith('/').default('/socket.io'),
   VITE_SOCKET_TRANSPORTS: z.string().default('websocket,polling'),
 
-  VITE_DEFAULT_THEME_ID: z.string().min(1).default('dark-fantasy'),
-  VITE_DEFAULT_THEME_MODE: z.enum(['dark', 'light', 'system']).default('dark'),
+  VITE_DEFAULT_THEME_ID: z.string().min(1).default('light'),
+  VITE_DEFAULT_THEME_MODE: z.enum(['dark', 'light', 'system']).default('light'),
   VITE_THEME_REMOTE_CONFIG_ENABLED: booleanString.default('false'),
 
   VITE_FEATURE_PWA: booleanString.default('false'),
@@ -64,10 +64,16 @@ export const env = {
     isDevelopment: raw.VITE_APP_ENV === 'development',
   },
   api: {
-    baseUrl: raw.VITE_API_BASE_URL.replace(/\/+$/, ''),
+    // In Vite dev/preview, use same-origin `/api` (proxied to the backend) so
+    // phone/tablet testing over LAN works — `localhost:4000` on a phone is wrong.
+    baseUrl: import.meta.env.DEV
+      ? ''
+      : raw.VITE_API_BASE_URL.replace(/\/+$/, ''),
     prefix: raw.VITE_API_PREFIX,
     timeoutMs: raw.VITE_API_TIMEOUT_MS,
-    fullBaseUrl: `${raw.VITE_API_BASE_URL.replace(/\/+$/, '')}${raw.VITE_API_PREFIX}`,
+    fullBaseUrl: import.meta.env.DEV
+      ? raw.VITE_API_PREFIX
+      : `${raw.VITE_API_BASE_URL.replace(/\/+$/, '')}${raw.VITE_API_PREFIX}`,
   },
   socket: {
     url: raw.VITE_SOCKET_URL,

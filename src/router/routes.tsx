@@ -26,10 +26,7 @@ import { ADMIN_ROLES } from '@shared/enums';
 // Auth + first-launch — lazy so the main user-app bundle stays lean.
 const SplashScreen = lazy(() => import('@features/auth/screens/SplashScreen'));
 const OnboardingScreen = lazy(() => import('@features/auth/screens/OnboardingScreen'));
-const LoginScreen = lazy(() => import('@features/auth/screens/LoginScreen'));
-const SignupScreen = lazy(() => import('@features/auth/screens/SignupScreen'));
-const ForgotPasswordScreen = lazy(() => import('@features/auth/screens/ForgotPasswordScreen'));
-const ResetPasswordScreen = lazy(() => import('@features/auth/screens/ResetPasswordScreen'));
+const PhoneAuthScreen = lazy(() => import('@features/auth/screens/PhoneAuthScreen'));
 const OtpVerifyScreen = lazy(() => import('@features/auth/screens/OtpVerifyScreen'));
 const VerifyEmailScreen = lazy(() => import('@features/auth/screens/VerifyEmailScreen'));
 
@@ -108,8 +105,8 @@ const ProfileScreen = lazy(() => import('@features/account/screens/ProfileScreen
 
 // PHASE 6 — Contests. Each chunk lazy-loaded so users who never browse
 // contests don't download the join / detail bundles.
-const ContestListScreen = lazy(
-  () => import('@features/contests/screens/ContestListScreen'),
+const MatchContestHubScreen = lazy(
+  () => import('@features/contests/screens/MatchContestHubScreen'),
 );
 const ContestDetailScreen = lazy(
   () => import('@features/contests/screens/ContestDetailScreen'),
@@ -152,12 +149,13 @@ export const routeTree: RouteObject[] = [
   {
     element: <PublicOnlyRoute />,
     children: [
-      { path: ROUTES.LOGIN, element: withSuspense(<LoginScreen />) },
-      { path: ROUTES.SIGNUP, element: withSuspense(<SignupScreen />) },
-      { path: ROUTES.FORGOT_PASSWORD, element: withSuspense(<ForgotPasswordScreen />) },
-      { path: ROUTES.RESET_PASSWORD, element: withSuspense(<ResetPasswordScreen />) },
-      { path: ROUTES.OTP_VERIFY, element: withSuspense(<OtpVerifyScreen />) },
-      { path: ROUTES.VERIFY_EMAIL, element: withSuspense(<VerifyEmailScreen />) },
+      { path: ROUTES.LOGIN, element: withSuspense(<PhoneAuthScreen />) },
+      { path: ROUTES.SIGNUP, element: <Navigate to={ROUTES.LOGIN} replace /> },
+      { path: ROUTES.FORGOT_PASSWORD, element: <Navigate to={ROUTES.LOGIN} replace /> },
+      { path: ROUTES.RESET_PASSWORD, element: <Navigate to={ROUTES.LOGIN} replace /> },
+      { path: '/auth/phone', element: <Navigate to={ROUTES.LOGIN} replace /> },
+      { path: ROUTES.OTP_VERIFY, element: <Navigate to={ROUTES.LOGIN} replace /> },
+      { path: ROUTES.VERIFY_EMAIL, element: <Navigate to={ROUTES.LOGIN} replace /> },
     ],
   },
 
@@ -253,7 +251,7 @@ export const routeTree: RouteObject[] = [
           { path: ROUTES.PROFILE, element: withSuspense(<ProfileScreen />) },
           // PHASE 6 — Contests
           { path: ROUTES.MY_CONTESTS, element: withSuspense(<MyContestsScreen />) },
-          { path: ROUTES.MATCH_CONTESTS, element: withSuspense(<ContestListScreen />) },
+          { path: ROUTES.MATCH_CONTESTS, element: withSuspense(<MatchContestHubScreen />) },
           { path: ROUTES.CONTEST_DETAIL, element: withSuspense(<ContestDetailScreen />) },
           { path: ROUTES.CONTEST_JOIN, element: withSuspense(<JoinContestScreen />) },
           // PHASE 7 — Leaderboard + rankings

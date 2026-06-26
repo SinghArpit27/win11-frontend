@@ -1,25 +1,16 @@
-import { CircleMinus, CirclePlus } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
 import { memo } from 'react';
 
 import { cn } from '@utils/cn';
 
+import { CREATE_TEAM_COLORS, CREATE_TEAM_LAYOUT } from '../fantasy.create-team.tokens';
 import type { FantasyMatchPlayer } from '../fantasy.types';
 
-/**
- * Dense row for the split two-column player picker.
- * Uses theme tokens so light / dark / system modes stay readable.
- */
 interface PlayerListRowProps {
   player: FantasyMatchPlayer;
   isSelected: boolean;
   onToggle: (playerId: string) => void;
   disabled?: boolean;
-  align?: 'left' | 'right';
-  /** Secondary stat label below the name. Defaults to `sel by`. */
-  primaryStatLabel?: string;
-  primaryStatValue?: string;
-  /** Trailing numeric (credits / points). */
-  secondaryValue?: string;
   captainBadge?: 'C' | 'VC' | null;
   className?: string;
 }
@@ -32,8 +23,8 @@ const initialsOf = (name: string): string => {
 
 const ROLE_SHORT: Record<string, string> = {
   WICKET_KEEPER: 'WK',
-  BATSMAN: 'BAT',
   ALL_ROUNDER: 'ALL',
+  BATSMAN: 'BAT',
   BOWLER: 'BOWL',
   GOALKEEPER: 'GK',
   DEFENDER: 'DEF',
@@ -41,23 +32,64 @@ const ROLE_SHORT: Record<string, string> = {
   FORWARD: 'FWD',
 };
 
+const roleW = 'w-[14px]';
+const avatarW = 'w-10';
+const actionW = 'w-[30px]';
+
+/** Outlined +/- — small circle, bold ring, no fill. */
+const PlayerToggleIcon = ({
+  isSelected,
+  muted,
+}: {
+  isSelected: boolean;
+  muted?: boolean;
+}): JSX.Element => {
+  const color = muted
+    ? '#b0bec5'
+    : isSelected
+      ? CREATE_TEAM_COLORS.minus
+      : CREATE_TEAM_COLORS.plus;
+  const { actionIconSizePx, actionIconBorderPx, actionIconStroke } = CREATE_TEAM_LAYOUT;
+  const glyph = actionIconSizePx * 0.45;
+
+  return (
+    <span
+      aria-hidden
+      className="flex shrink-0 items-center justify-center rounded-full"
+      style={{
+        width: actionIconSizePx,
+        height: actionIconSizePx,
+        border: `${actionIconBorderPx}px solid ${muted ? '#cfd8dc' : color}`,
+        backgroundColor: CREATE_TEAM_COLORS.white,
+        color: muted ? '#b0bec5' : color,
+      }}
+    >
+      {isSelected ? (
+        <Minus style={{ width: glyph, height: glyph }} strokeWidth={actionIconStroke} />
+      ) : (
+        <Plus style={{ width: glyph, height: glyph }} strokeWidth={actionIconStroke} />
+      )}
+    </span>
+  );
+};
+
 const PlayerListRowComponent = ({
   player,
   isSelected,
   onToggle,
   disabled,
-  align = 'left',
-  primaryStatLabel = 'sel by',
-  primaryStatValue,
-  secondaryValue,
   captainBadge,
   className,
 }: PlayerListRowProps): JSX.Element => {
-  const teamColor = player.team?.primaryColor ?? 'var(--w11-color-text-muted)';
   const rolePill = ROLE_SHORT[player.role] ?? player.role;
+  const displayName = player.shortName ?? player.name;
   const selValue =
-    primaryStatValue ??
-    (player.selectionPercent !== null ? `${player.selectionPercent.toFixed(1)}%` : '—');
+    player.selectionPercent !== null ? `${player.selectionPercent.toFixed(2)}%` : '—';
+  const creditsLabel = Number.isInteger(player.credits)
+    ? String(player.credits)
+    : player.credits.toFixed(1);
+  const iconMuted = Boolean(disabled && !isSelected);
+  const { rowMinHeightPx, rowPaddingX, rowPaddingY, rowGapPx } = CREATE_TEAM_LAYOUT;
 
   return (
     <button
@@ -67,81 +99,139 @@ const PlayerListRowComponent = ({
       aria-pressed={isSelected}
       aria-label={`${isSelected ? 'Remove' : 'Add'} ${player.name}`}
       className={cn(
-        'group flex w-full min-h-[72px] items-center gap-2 border-b border-border px-1.5 py-2 text-left transition-colors',
-        'bg-surface hover:bg-surface-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset',
-        isSelected && 'bg-primary-soft/50 ring-1 ring-inset ring-primary/25',
+        'flex w-full min-w-0 items-center border-b',
+        'transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e53935]/20',
         disabled && 'cursor-not-allowed opacity-50',
-        align === 'right' && 'flex-row-reverse text-right',
+        !isSelected && 'hover:bg-[#fafafa]',
         className,
       )}
+      style={{
+        minHeight: rowMinHeightPx,
+        paddingLeft: rowPaddingX,
+        paddingRight: rowPaddingX,
+        paddingTop: rowPaddingY,
+        paddingBottom: rowPaddingY,
+        gap: rowGapPx,
+        borderColor: CREATE_TEAM_COLORS.divider,
+        backgroundColor: isSelected ? CREATE_TEAM_COLORS.selectedRowBg : CREATE_TEAM_COLORS.white,
+      }}
     >
-      <div className="relative flex shrink-0 flex-col items-center gap-0.5">
+      {/* Vertical role label — far left gutter */}
+      <span
+        className={cn(roleW, 'shrink-0 self-center text-center font-bold uppercase leading-none')}
+        style={{
+          fontSize: CREATE_TEAM_LAYOUT.roleFontPx,
+          color: CREATE_TEAM_COLORS.roleText,
+          writingMode: 'vertical-rl',
+          transform: 'rotate(180deg)',
+        }}
+      >
+        {rolePill}
+      </span>
+
+      {/* Avatar */}
+      <div
+        className={cn('relative shrink-0 self-center')}
+        style={{ width: CREATE_TEAM_LAYOUT.avatarPx, height: CREATE_TEAM_LAYOUT.avatarPx }}
+      >
         <div
-          className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-surface-elevated text-[10px] font-bold uppercase tracking-wide text-text ring-2 ring-border"
-          style={{ boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${teamColor} 55%, transparent)` }}
+          className="flex h-full w-full items-center justify-center overflow-hidden rounded-full"
+          style={{
+            backgroundColor: CREATE_TEAM_COLORS.avatarBg,
+            boxShadow: `inset 0 0 0 1px ${CREATE_TEAM_COLORS.avatarRing}`,
+          }}
         >
           {player.photoUrl ? (
             <img
               src={player.photoUrl}
               alt=""
               loading="lazy"
-              className="absolute inset-0 h-full w-full object-cover"
+              className="h-full w-full object-cover"
             />
           ) : (
-            <span>{initialsOf(player.name)}</span>
-          )}
-          {captainBadge ? (
-            <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-text text-[9px] font-bold text-bg shadow ring-2 ring-surface">
-              {captainBadge}
+            <span
+              className="font-bold uppercase"
+              style={{ fontSize: 9, color: '#90a4ae' }}
+            >
+              {initialsOf(player.name)}
             </span>
-          ) : null}
+          )}
         </div>
-        <span
-          className="max-w-[62px] truncate rounded-sm px-1 py-px text-[8px] font-bold uppercase tracking-wide text-text-inverse"
-          style={{ backgroundColor: teamColor }}
-          title={`${player.team?.shortName ?? '—'} ${rolePill}`}
+        {captainBadge ? (
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#212121] text-[5px] font-bold text-white ring-1 ring-white">
+            {captainBadge}
+          </span>
+        ) : null}
+      </div>
+
+      {/* Name + selection % — % Sel By sits directly under name */}
+      <div className="min-w-0 flex-1 self-center overflow-hidden text-left">
+        <p
+          className="truncate font-bold leading-[14px]"
+          style={{
+            fontSize: CREATE_TEAM_LAYOUT.nameFontPx,
+            color: CREATE_TEAM_COLORS.nameText,
+          }}
+          title={displayName}
         >
-          {player.team?.shortName ?? '—'} {rolePill}
+          {displayName}
+        </p>
+        <p
+          className="mt-[3px] tabular-nums leading-[12px]"
+          style={{
+            fontSize: CREATE_TEAM_LAYOUT.selFontPx,
+            fontWeight: 400,
+            color: CREATE_TEAM_COLORS.selText,
+          }}
+        >
+          {selValue}
+        </p>
+      </div>
+
+      {/* Credits under +/- icon */}
+      <div className={cn('flex shrink-0 flex-col items-center self-center', actionW)}>
+        <PlayerToggleIcon isSelected={isSelected} muted={iconMuted} />
+        <span
+          className="mt-[3px] font-bold tabular-nums leading-none"
+          style={{
+            fontSize: CREATE_TEAM_LAYOUT.creditsFontPx,
+            color: CREATE_TEAM_COLORS.creditsText,
+          }}
+        >
+          {creditsLabel}
         </span>
       </div>
-
-      <div className={cn('flex min-w-0 flex-1 flex-col gap-0.5', align === 'right' && 'items-end')}>
-        <div
-          className="w-full truncate text-sm font-bold leading-tight text-text"
-          title={player.name}
-        >
-          {player.shortName ?? player.name}
-        </div>
-        <div className="truncate text-[11px] text-text-muted">
-          <span className="font-semibold tabular-nums text-text">{selValue}</span>
-          {primaryStatLabel ? <span className="ml-1 lowercase">{primaryStatLabel}</span> : null}
-        </div>
-      </div>
-
-      {secondaryValue !== undefined ? (
-        <div className={cn('flex shrink-0 flex-col items-end', align === 'right' && 'items-start')}>
-          <span className="text-[10px] font-medium uppercase tracking-wide text-text-muted">
-            cr
-          </span>
-          <span className="text-sm font-bold tabular-nums text-text">{secondaryValue}</span>
-        </div>
-      ) : null}
-
-      <span
-        aria-hidden
-        className={cn(
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors',
-          isSelected ? 'text-danger' : 'text-success group-disabled:text-text-muted',
-        )}
-      >
-        {isSelected ? (
-          <CircleMinus className="h-[22px] w-[22px]" strokeWidth={2} />
-        ) : (
-          <CirclePlus className="h-[22px] w-[22px]" strokeWidth={2} />
-        )}
-      </span>
     </button>
   );
 };
 
 export const PlayerListRow = memo(PlayerListRowComponent);
+
+/** Column sub-header — % Sel By over name block, Credits over action block. */
+export const SplitPlayerColumnHeader = ({ className }: { className?: string }): JSX.Element => (
+  <div
+    className={cn('flex items-end', className)}
+    style={{
+      gap: CREATE_TEAM_LAYOUT.rowGapPx,
+      paddingLeft: CREATE_TEAM_LAYOUT.rowPaddingX,
+      paddingRight: CREATE_TEAM_LAYOUT.rowPaddingX,
+      paddingTop: 6,
+      paddingBottom: 10,
+      backgroundColor: CREATE_TEAM_COLORS.columnHeaderBg,
+      color: CREATE_TEAM_COLORS.columnHeaderText,
+      fontSize: CREATE_TEAM_LAYOUT.columnHeaderFontPx,
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '0.02em',
+    }}
+  >
+    <span className={cn(roleW, 'shrink-0')} aria-hidden />
+    <span className={cn(avatarW, 'shrink-0')} aria-hidden />
+    <span className="min-w-0 flex-1">% Sel By</span>
+    <span className={cn(actionW, 'shrink-0 text-center')}>Credits</span>
+  </div>
+);
+
+export const PLAYER_ROW_GRID_CLASS = '';
+
+export { roleW as SPLIT_PLAYER_ROLE_W, avatarW as SPLIT_PLAYER_AVATAR_W, actionW as SPLIT_PLAYER_ACTION_W };

@@ -6,6 +6,7 @@ import { PageContainer, PageHeader } from '@components/layout';
 import { Button, Card, Typography } from '@components/ui';
 import { ROUTES } from '@constants/routes.constants';
 import { useAuth } from '@features/auth';
+import { resolveUserHandle, userAvatarInitials } from '@features/auth/auth.utils';
 import { useTheme } from '@hooks/useTheme';
 import { themeRegistry } from '@theme/theme.registry';
 import type { ThemeId, ThemeMode } from '@theme/theme.types';
@@ -29,8 +30,8 @@ const ProfileScreen = (): JSX.Element => {
   const { user, logout, flags, roles } = useAuth();
   const { mode, setMode, themeId, setThemeId } = useTheme();
 
-  const displayName = user?.displayName ?? user?.username ?? user?.email ?? user?.phone ?? 'Player';
-  const initials = displayName.slice(0, 1).toUpperCase();
+  const handle = resolveUserHandle(user);
+  const initials = userAvatarInitials(user);
 
   const palettes = themeRegistry.list();
 
@@ -54,8 +55,13 @@ const ProfileScreen = (): JSX.Element => {
             </span>
             <div className="min-w-0">
               <Typography variant="h3" className="block truncate">
-                {displayName}
+                {handle}
               </Typography>
+              {user?.username ? (
+                <Typography variant="caption" tone="muted" className="mt-0.5 block truncate">
+                  @{user.username}
+                </Typography>
+              ) : null}
               {roles.length > 0 ? (
                 <div className="mt-1 flex flex-wrap gap-1">
                   {roles.map((role) => (
@@ -72,14 +78,11 @@ const ProfileScreen = (): JSX.Element => {
           </div>
 
           <div className="mt-5 space-y-2.5">
-            {user?.email ? (
-              <ContactRow Icon={Mail} value={user.email} verified={user.emailVerified} />
-            ) : null}
             {user?.phone ? (
               <ContactRow Icon={Phone} value={user.phone} verified={user.phoneVerified} />
             ) : null}
-            {user?.username ? (
-              <ContactRow Icon={User2} value={`@${user.username}`} />
+            {user?.email ? (
+              <ContactRow Icon={Mail} value={user.email} verified={user.emailVerified} />
             ) : null}
           </div>
 

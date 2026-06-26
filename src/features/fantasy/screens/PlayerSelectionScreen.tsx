@@ -1,4 +1,3 @@
-import { ChevronDown, Eye } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
@@ -8,36 +7,29 @@ import type { PlayerRole } from '@shared/enums';
 import { cn } from '@utils/cn';
 
 import {
+  FantasyCreateTeamFooter,
   FantasyFlowShell,
   FantasyMatchHeader,
-  FantasyStickyFooter,
   PlayerListRow,
   RoleTabs,
+  SquadListHeader,
   StatsTabs,
-  type StatsTabItem,
-  ValidationFeedback,
-  fantasyFooterBtn,
 } from '../components';
+import { CREATE_TEAM_COLORS, CREATE_TEAM_LAYOUT } from '../fantasy.create-team.tokens';
 import {
   useGetFantasyMatchContextQuery,
   useGetMyFantasyTeamQuery,
   useListMyFantasyTeamsQuery,
 } from '../fantasy.api';
 import type { FantasyDraftSelection, FantasyMatchPlayer, FantasyRule } from '../fantasy.types';
+import { buildFantasyMatchStats, isPlayerPickDisabled, sortFantasyPlayers } from '../fantasy.utils';
 import { useFantasyDraft, useFantasyValidation } from '../hooks';
 
 /**
  * Step 1 of the create-team flow — Dream11-style player picker.
  *
- *  Layout:
- *   - Dark gradient `FantasyMatchHeader` with countdown, score, dot
- *     progress, and a clear-selection X on the right.
- *   - Sport-aware `RoleTabs` strip directly below the header.
- *   - Two-column player list split by team — left column = home team,
- *     right column = away team. Each row uses `PlayerListRow`.
- *   - Sticky `FantasyPillActionBar` pinned to the safe-area bottom with
- *     two ghost actions (`PREVIEW`, `PAST LINEUP`) and a primary CTA
- *     (`NEXT` or `Choose Captain`).
+ * Uses the global `AppTopBar` (same as Home) plus a dark match header,
+ * stats strip, role tabs, and a two-column squad split for every tab.
  */
 const PlayerSelectionScreen = (): JSX.Element => {
   const { matchId = '' } = useParams<{ matchId: string }>();
@@ -45,6 +37,7 @@ const PlayerSelectionScreen = (): JSX.Element => {
   const [params] = useSearchParams();
   const editTeamId = params.get('editTeamId');
   const cloneTeamId = params.get('cloneTeamId');
+  const contestId = params.get('contestId');
 
   const ctxQuery = useGetFantasyMatchContextQuery({ matchId }, { skip: !matchId });
   const teamsQuery = useListMyFantasyTeamsQuery(
@@ -52,7 +45,6 @@ const PlayerSelectionScreen = (): JSX.Element => {
     { skip: !matchId },
   );
 
-  // Edit / clone seed
   const seedTeamQuery = useGetMyFantasyTeamQuery(
     { teamId: (editTeamId ?? cloneTeamId) ?? '' },
     { skip: !editTeamId && !cloneTeamId },
@@ -91,10 +83,9 @@ const PlayerSelectionScreen = (): JSX.Element => {
     isEdit: Boolean(editTeamId),
   });
 
-  // ── Filters ─────────────────────────────────────────────────────────
   const [activeRole, setActiveRole] = useState<PlayerRole | 'ALL'>('ALL');
+  const [creditsDesc, setCreditsDesc] = useState(true);
 
-  // ── Derived: split by team for the two-column grid ──────────────────
   const { home, away, homePlayers, awayPlayers } = useMemo(() => {
     if (!ctx?.match || !ctx.players) {
       return { home: null, away: null, homePlayers: [], awayPlayers: [] };
@@ -108,17 +99,21 @@ const PlayerSelectionScreen = (): JSX.Element => {
       if (p.team?.id === homeId) homeSide.push(p);
       else if (p.team?.id === awayId) awaySide.push(p);
     }
+    const direction = creditsDesc ? 'desc' : 'asc';
     return {
       home: ctx.match.homeTeam,
       away: ctx.match.awayTeam,
-      homePlayers: homeSide,
-      awayPlayers: awaySide,
+      homePlayers: sortFantasyPlayers(homeSide, 'credits', direction),
+      awayPlayers: sortFantasyPlayers(awaySide, 'credits', direction),
     };
-  }, [ctx?.match, ctx?.players, activeRole]);
+  }, [ctx?.match, ctx?.players, activeRole, creditsDesc]);
 
   const selectionByRole = validation?.summary.roleBreakdown ?? {};
   const selectionByTeam = validation?.summary.teamBreakdown ?? {};
   const creditsUsed = validation?.summary.creditsUsed ?? 0;
+
+  const homePickCount = home ? selectionByTeam[home.id] ?? 0 : 0;
+  const awayPickCount = away ? selectionByTeam[away.id] ?? 0 : 0;
 
   const canProceed = Boolean(
     rule &&
@@ -136,7 +131,6 @@ const PlayerSelectionScreen = (): JSX.Element => {
       ),
   );
 
-  // ── Loading / error fallbacks ──────────────────────────────────────
   if (!matchId) {
     return (
       <div className="px-4 py-6">
@@ -158,9 +152,6 @@ const PlayerSelectionScreen = (): JSX.Element => {
     );
   }
   if (ctxQuery.isError || !ctx || !rule) {
-    // Surface as much actionable detail as possible: matchId, the API
-    // error code (e.g. `MATCH_NOT_FOUND`, `FANTASY_RULES_NOT_CONFIGURED`),
-    // and the sport/format when the context loaded but the rule didn't.
     const err = ctxQuery.error as
       | { status?: number; data?: { code?: string; message?: string } }
       | undefined;
@@ -216,23 +207,18 @@ const PlayerSelectionScreen = (): JSX.Element => {
   const totalSelected = validation?.summary.playersSelected ?? 0;
 
   const onNext = (): void => {
-    const queryString = editTeamId
-      ? `?editTeamId=${editTeamId}`
-      : cloneTeamId
-        ? `?cloneTeamId=${cloneTeamId}`
-        : '';
-    navigate(`${ROUTES.FANTASY_CAPTAINS.replace(':matchId', matchId)}${queryString}`, {
-      state: { selections: draft.selections, name: draft.name },
-    });
+    const query = new URLSearchParams();
+    if (editTeamId) query.set('editTeamId', editTeamId);
+    else if (cloneTeamId) query.set('cloneTeamId', cloneTeamId);
+    if (contestId) query.set('contestId', contestId);
+    const queryString = query.toString();
+    navigate(
+      `${ROUTES.FANTASY_CAPTAINS.replace(':matchId', matchId)}${queryString ? `?${queryString}` : ''}`,
+      { state: { selections: draft.selections, name: draft.name } },
+    );
   };
 
-  const statsItems: StatsTabItem[] = [
-    ctx.match?.venue?.name ? { id: 'venue', label: `Venue: ${ctx.match.venue.name}` } : null,
-    ctx.match?.tournament?.shortName
-      ? { id: 'tour', label: ctx.match.tournament.shortName }
-      : null,
-    ctx.format ? { id: 'format', label: `Format: ${ctx.format}` } : null,
-  ].filter((s): s is StatsTabItem => s !== null);
+  const statsItems = buildFantasyMatchStats(ctx);
 
   const onPreview = (): void =>
     void navigate(`${ROUTES.FANTASY_PREVIEW.replace(':matchId', matchId)}?draft=1`, {
@@ -241,113 +227,94 @@ const PlayerSelectionScreen = (): JSX.Element => {
 
   return (
     <FantasyFlowShell withFooter>
-        <FantasyMatchHeader
-          context={ctx}
-          title="Create Team"
-          onBack={() => navigate(-1)}
-          selectedCount={totalSelected}
-          requiredCount={rule.teamSize}
-          onClearSelection={draft.selections.length > 0 ? draft.clearSelections : undefined}
+      <FantasyMatchHeader
+        context={ctx}
+        title="Create Team"
+        onBack={() => navigate(-1)}
+        selectedCount={totalSelected}
+        requiredCount={rule.teamSize}
+        homePickCount={homePickCount}
+        awayPickCount={awayPickCount}
+        onClearSelection={draft.selections.length > 0 ? draft.clearSelections : undefined}
+      />
+
+      <StatsTabs items={statsItems} />
+
+      <RoleTabs
+        active={activeRole}
+        onChange={setActiveRole}
+        constraints={rule.roleConstraints}
+        selectionByRole={selectionByRole}
+        totalSelected={totalSelected}
+        totalRequired={rule.teamSize}
+        className="sticky top-0 z-20 bg-[#ffffff]"
+      />
+
+      {home && away ? (
+        <SquadListHeader
+          creditsDesc={creditsDesc}
+          onToggleCreditsSort={() => setCreditsDesc((prev) => !prev)}
+          homeLabel={<TeamFlagHeader team={home} align="start" />}
+          awayLabel={<TeamFlagHeader team={away} align="end" />}
         />
+      ) : null}
 
-        <StatsTabs items={statsItems} />
-
-        <RoleTabs
-          active={activeRole}
-          onChange={setActiveRole}
-          constraints={rule.roleConstraints}
-          selectionByRole={selectionByRole}
-          totalSelected={totalSelected}
-          totalRequired={rule.teamSize}
-          className="sticky top-0 z-20 bg-surface"
-        />
-
-        {home && away ? (
-          <div className="flex items-center justify-between gap-2 border-b border-border bg-surface px-3 py-2">
-            <TeamFlagHeader team={home} align="start" />
-            <button
-              type="button"
-              className="flex items-center gap-1 rounded-full border border-border bg-surface-elevated px-3 py-1 text-[11px] font-semibold text-text"
-              aria-label="Sort by"
+      <div
+        className="min-h-0 flex-1 overflow-y-auto pt-4"
+        style={{ backgroundColor: CREATE_TEAM_COLORS.white }}
+      >
+        {Array.from({ length: Math.max(homePlayers.length, awayPlayers.length) }).map(
+          (_, rowIdx) => (
+            <div
+              key={rowIdx}
+              className="grid min-w-0 grid-cols-2 divide-x divide-dashed divide-[#d8d8d8]"
             >
-              Credits <ChevronDown className="h-3 w-3" />
-            </button>
-            <TeamFlagHeader team={away} align="end" />
-          </div>
-        ) : null}
-
-        <div className="grid grid-cols-[1fr_24px_1fr] items-center border-b border-border bg-surface px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-text-muted sm:px-3">
-          <div className="flex items-center justify-between pr-1">
-            <span>sel by</span>
-            <span>cr</span>
-          </div>
-          <span />
-          <div className="flex items-center justify-between pl-1">
-            <span>sel by</span>
-            <span>cr</span>
-          </div>
-        </div>
-
-        <div className="grid flex-1 grid-cols-[1fr_24px_1fr] bg-surface px-1 sm:px-2">
-          <PlayerColumn
-            players={homePlayers}
-            draft={draft}
-            selectionByRole={selectionByRole}
-            selectionByTeam={selectionByTeam}
-            rule={rule}
-            creditsUsed={creditsUsed}
-            totalSelected={totalSelected}
-            matchLocked={matchLocked}
-            align="left"
-          />
-          <RankGutter length={Math.max(homePlayers.length, awayPlayers.length)} />
-          <PlayerColumn
-            players={awayPlayers}
-            draft={draft}
-            selectionByRole={selectionByRole}
-            selectionByTeam={selectionByTeam}
-            rule={rule}
-            creditsUsed={creditsUsed}
-            totalSelected={totalSelected}
-            matchLocked={matchLocked}
-            align="right"
-          />
-        </div>
-
-        {validation && !validation.isValid && validation.issues.length > 0 ? (
-          <div className="pointer-events-none absolute inset-x-0 bottom-20 z-30 flex justify-center px-3">
-            <div className="pointer-events-auto w-full max-w-[380px]">
-              <ValidationFeedback result={validation} maxIssues={1} />
+              <PlayerCell
+                player={homePlayers[rowIdx]}
+                draft={draft}
+                selectionByRole={selectionByRole}
+                selectionByTeam={selectionByTeam}
+                rule={rule}
+                creditsUsed={creditsUsed}
+                totalSelected={totalSelected}
+                matchLocked={matchLocked}
+              />
+              <PlayerCell
+                player={awayPlayers[rowIdx]}
+                draft={draft}
+                selectionByRole={selectionByRole}
+                selectionByTeam={selectionByTeam}
+                rule={rule}
+                creditsUsed={creditsUsed}
+                totalSelected={totalSelected}
+                matchLocked={matchLocked}
+              />
             </div>
-          </div>
-        ) : null}
+          ),
+        )}
+      </div>
 
-        <FantasyStickyFooter>
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={onPreview}
-              disabled={draft.selections.length === 0}
-              className={fantasyFooterBtn.ghost}
-            >
-              <Eye className="h-4 w-4" />
-              Preview
-            </button>
-            <button
-              type="button"
-              onClick={onNext}
-              disabled={!canProceed || matchLocked}
-              className={fantasyFooterBtn.primary}
-            >
-              Next
-            </button>
-          </div>
-        </FantasyStickyFooter>
+      <p
+        className="shrink-0 border-t px-3 py-2 text-[9px] leading-snug text-[#9e9e9e]"
+        style={{
+          backgroundColor: CREATE_TEAM_COLORS.white,
+          borderColor: CREATE_TEAM_COLORS.divider,
+        }}
+      >
+        *For information purposes only. User discretion is advised. Batting order is subject to
+        change in the real match.
+      </p>
+
+      <FantasyCreateTeamFooter
+        onPreview={onPreview}
+        onNext={onNext}
+        previewDisabled={draft.selections.length === 0}
+        nextDisabled={!canProceed || matchLocked}
+      />
     </FantasyFlowShell>
   );
 };
 
-// ── Internal — column header (team flag + short name) ──────────────────
 const TeamFlagHeader = ({
   team,
   align,
@@ -357,42 +324,34 @@ const TeamFlagHeader = ({
 }): JSX.Element => (
   <div
     className={cn(
-      'flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-text',
+      'flex items-center gap-1 font-bold uppercase tracking-wide',
       align === 'end' && 'flex-row-reverse',
     )}
+    style={{
+      fontSize: CREATE_TEAM_LAYOUT.teamLabelFontPx,
+      color: CREATE_TEAM_COLORS.nameText,
+    }}
   >
     <div
-      className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-full ring-1 ring-border"
-      style={{ backgroundColor: team.primaryColor ?? '#444' }}
+      className="flex h-[22px] w-[22px] shrink-0 items-center justify-center overflow-hidden rounded-full"
+      style={{
+        backgroundColor: team.primaryColor ?? '#444',
+        boxShadow: 'inset 0 0 0 1px rgba(0,0,0,0.08)',
+      }}
       aria-hidden
     >
       {team.logoUrl ? (
         <img src={team.logoUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
       ) : (
-        <span className="text-[7px] font-bold text-white">{team.shortName.slice(0, 2)}</span>
+        <span className="text-[8px] font-bold text-white">{team.shortName.slice(0, 2)}</span>
       )}
     </div>
     <span>{team.shortName}</span>
   </div>
 );
 
-// ── Internal — vertical rank column rendered between the two player columns ──
-const RankGutter = ({ length }: { length: number }): JSX.Element => (
-  <ul className="flex flex-col items-center" aria-hidden>
-    {Array.from({ length }).map((_, idx) => (
-      <li
-        key={idx}
-        className="flex h-[72px] w-full items-center justify-center text-[10px] font-bold tabular-nums text-text-muted"
-      >
-        {idx + 1}
-      </li>
-    ))}
-  </ul>
-);
-
-// ── Internal — one column of players ───────────────────────────────────
-interface PlayerColumnProps {
-  players: FantasyMatchPlayer[];
+interface PlayerCellProps {
+  player?: FantasyMatchPlayer;
   draft: ReturnType<typeof useFantasyDraft>;
   selectionByRole: Record<string, number>;
   selectionByTeam: Record<string, number>;
@@ -400,11 +359,10 @@ interface PlayerColumnProps {
   creditsUsed: number;
   totalSelected: number;
   matchLocked: boolean;
-  align: 'left' | 'right';
 }
 
-const PlayerColumn = ({
-  players,
+const PlayerCell = ({
+  player,
   draft,
   selectionByRole,
   selectionByTeam,
@@ -412,51 +370,37 @@ const PlayerColumn = ({
   creditsUsed,
   totalSelected,
   matchLocked,
-  align,
-}: PlayerColumnProps): JSX.Element => {
-  if (players.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-8 text-xs text-text-muted">
-        No players
-      </div>
-    );
+}: PlayerCellProps): JSX.Element => {
+  if (!player) {
+    return <div style={{ minHeight: CREATE_TEAM_LAYOUT.rowMinHeightPx, backgroundColor: CREATE_TEAM_COLORS.white }} aria-hidden />;
   }
+
+  const selection = draft.selections.find((s) => s.playerId === player.id);
+  const isSelected = Boolean(selection);
+  const teamCount = player.team ? selectionByTeam[player.team.id] ?? 0 : 0;
+  const roleCount = selectionByRole[player.role] ?? 0;
+  const roleCap = rule.roleConstraints.find((c) => c.role === player.role)?.max ?? rule.teamSize;
+  const disabled = isPlayerPickDisabled(player, {
+    isSelected,
+    matchLocked,
+    creditsUsed,
+    creditBudget: rule.creditBudget,
+    roleCount,
+    roleCap,
+    teamCount,
+    maxFromSingleTeam: rule.maxFromSingleTeam,
+    totalSelected,
+    teamSize: rule.teamSize,
+  });
+
   return (
-    <ul>
-      {players.map((p) => {
-        const selection = draft.selections.find((s) => s.playerId === p.id);
-        const isSelected = Boolean(selection);
-        const teamCount = p.team ? selectionByTeam[p.team.id] ?? 0 : 0;
-        const roleCount = selectionByRole[p.role] ?? 0;
-        const roleCap = rule.roleConstraints.find((c) => c.role === p.role)?.max ?? rule.teamSize;
-        const wouldExceedCredits = !isSelected && creditsUsed + p.credits > rule.creditBudget;
-        const wouldExceedRole = !isSelected && roleCount >= roleCap;
-        const wouldExceedTeam = !isSelected && teamCount >= rule.maxFromSingleTeam;
-        const sizeAtCap = totalSelected >= rule.teamSize;
-        const disabled =
-          matchLocked ||
-          (!isSelected && (sizeAtCap || wouldExceedRole || wouldExceedTeam || wouldExceedCredits));
-        return (
-          <li key={p.id} className="min-h-[72px]">
-            <PlayerListRow
-              player={p}
-              isSelected={isSelected}
-              onToggle={draft.toggleSelection}
-              disabled={disabled}
-              align={align}
-              className="h-full"
-              secondaryValue={
-                /* Phase 5 ships without per-match points — show base credits as the right-side stat */
-                `${p.credits.toFixed(1)}`
-              }
-              captainBadge={
-                selection?.isCaptain ? 'C' : selection?.isViceCaptain ? 'VC' : null
-              }
-            />
-          </li>
-        );
-      })}
-    </ul>
+    <PlayerListRow
+      player={player}
+      isSelected={isSelected}
+      onToggle={draft.toggleSelection}
+      disabled={disabled}
+      captainBadge={selection?.isCaptain ? 'C' : selection?.isViceCaptain ? 'VC' : null}
+    />
   );
 };
 

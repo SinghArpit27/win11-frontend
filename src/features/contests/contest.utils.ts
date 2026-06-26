@@ -13,10 +13,38 @@ import type { ContestMatchSummary, ContestSummary } from './contest.types';
 export const formatPrizeCompact = (minor: number, currency = 'INR'): string => {
   const major = Math.floor(minor / 100);
   if (currency !== 'INR') return formatMoney(minor, { currency });
-  if (major >= 1_00_00_000) return `₹${(major / 1_00_00_000).toFixed(2)} Cr`;
-  if (major >= 1_00_000) return `₹${(major / 1_00_000).toFixed(2)} Lakhs`;
-  if (major >= 1_000) return `₹${(major / 1_000).toFixed(1)}K`;
+  if (major >= 1_00_00_000) return `₹${trimDecimal(major / 1_00_00_000)} Cr`;
+  if (major >= 1_00_000) return `₹${trimDecimal(major / 1_00_000)} Lakhs`;
+  if (major >= 1_000) return `₹${trimDecimal(major / 1_000)}K`;
   return `₹${major.toLocaleString('en-IN')}`;
+};
+
+/** Dream11 card headline — e.g. `₹75 Lakhs`, `₹2.25 Crores`. */
+export const formatPoolHeadline = (minor: number, currency = 'INR'): string => {
+  const major = Math.floor(minor / 100);
+  if (currency !== 'INR') return formatMoney(minor, { currency });
+  if (major >= 1_00_00_000) return `₹${trimDecimal(major / 1_00_00_000)} Crores`;
+  if (major >= 1_00_000) return `₹${trimDecimal(major / 1_00_000)} Lakhs`;
+  if (major >= 1_000) return `₹${trimDecimal(major / 1_000)}K`;
+  return `₹${major.toLocaleString('en-IN')}`;
+};
+
+/** Entry fee on green CTA — `₹49`. */
+export const formatEntryFeeLabel = (minor: number, currency = 'INR'): string =>
+  formatMoney(minor, { currency, locale: 'en-IN' }).replace(/\.00$/, '');
+
+const trimDecimal = (n: number): string => {
+  const s = n.toFixed(2);
+  return s.endsWith('.00') ? s.slice(0, -3) : s.replace(/0$/, '').replace(/\.$/, '');
+};
+
+/** Mega-contest footer label — e.g. `₹1.27 Crores+`. */
+export const formatMegaPrizeLabel = (minor: number, currency = 'INR'): string => {
+  const major = Math.floor(minor / 100);
+  if (currency === 'INR' && major >= 1_00_00_000) {
+    return `₹${(major / 1_00_00_000).toFixed(2)} Crores+`;
+  }
+  return `${formatPrizeCompact(minor, currency)}+`;
 };
 
 export const isContestJoinable = (status: ContestStatus): boolean =>
@@ -87,6 +115,25 @@ export const TYPE_META: Record<ContestType, { label: string; accent: string }> =
   [ContestType.PRIVATE]: { label: 'Private', accent: 'text-text-muted' },
   [ContestType.REGULAR]: { label: 'Contest', accent: 'text-text' },
 };
+
+/** Section headings above grouped contest cards on the match hub. */
+export const CONTEST_SECTION_LABEL: Record<ContestType, string> = {
+  [ContestType.MEGA]: 'Mega Contest',
+  [ContestType.GUARANTEED]: 'Guaranteed Contest',
+  [ContestType.HEAD_TO_HEAD]: 'Head to Head',
+  [ContestType.PRACTICE]: 'Practice Contest',
+  [ContestType.PRIVATE]: 'Private Contest',
+  [ContestType.REGULAR]: 'Contests',
+};
+
+export const CONTEST_SECTION_ORDER: ContestType[] = [
+  ContestType.MEGA,
+  ContestType.GUARANTEED,
+  ContestType.HEAD_TO_HEAD,
+  ContestType.REGULAR,
+  ContestType.PRACTICE,
+  ContestType.PRIVATE,
+];
 
 /** True when the contest has no entry fee. */
 export const isFreeContest = (contest: ContestSummary): boolean =>

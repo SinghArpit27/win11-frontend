@@ -1,64 +1,57 @@
 import { cn } from '@utils/cn';
 
-/**
- * Mega-contest prize indicator shown in the match-card footer.
- *
- *  Phase 4 ships a *placeholder* — actual prize-pool data lands with the
- *  Contest module in Phase 6. The visual structure is finalised here so
- *  swapping the data later is a one-line change.
- *
- *  Visual contract:
- *   - Hexagonal "M" badge in the brand primary tone on the left.
- *   - Amount (or "Coming Soon") on the right.
- *   - Inherits the parent's typography colour by default.
- *
- *  Reusable across home / matches list / details footer rows.
- */
+import type { Dream11Palette } from '../dream11.tokens';
+import { useDream11Palette } from '../hooks/useDream11Palette';
+
 interface MegaContestBadgeProps {
-  /** Pre-formatted prize amount (e.g. `₹57.03 Lakhs+`). Optional. */
   amount?: string | null;
-  /** Override the placeholder text when no amount is available. */
   placeholder?: string;
   className?: string;
+  palette?: Dream11Palette;
 }
 
+/** Dream11 mega prize row — gold hexagon + bold INR amount with superscript +. */
 export const MegaContestBadge = ({
   amount,
-  placeholder = 'Coming Soon',
+  placeholder = '₹1.27 Crores+',
   className,
-}: MegaContestBadgeProps): JSX.Element => (
-  <div className={cn('flex items-center gap-2 text-xs font-semibold', className)}>
-    <MegaHexIcon />
-    <span className={amount ? 'text-text' : 'text-text-muted'}>
-      {amount ?? placeholder}
-    </span>
-  </div>
-);
+  palette: paletteProp,
+}: MegaContestBadgeProps): JSX.Element => {
+  const resolved = useDream11Palette();
+  const palette = paletteProp ?? resolved;
+  const label = amount ?? placeholder;
+  const hasPlus = label.endsWith('+');
+  const base = hasPlus ? label.slice(0, -1) : label;
+
+  return (
+    <div className={cn('flex min-w-0 items-center gap-1.5', className)}>
+      <MegaHexIcon />
+      <span
+        className="truncate text-[11px] font-bold leading-none"
+        style={{ color: palette.textPrimary }}
+      >
+        {base}
+        {hasPlus ? <sup className="ml-px text-[9px] font-bold leading-none">+</sup> : null}
+      </span>
+    </div>
+  );
+};
 
 const MegaHexIcon = (): JSX.Element => (
-  <svg
-    aria-hidden
-    viewBox="0 0 24 24"
-    className="h-5 w-5 shrink-0"
-    fill="none"
-  >
+  <svg aria-hidden viewBox="0 0 24 24" className="h-[18px] w-[18px] shrink-0" fill="none">
     <path
-      d="M12 1.5l9.526 5.5v11L12 23.5 2.474 18V7L12 1.5z"
-      fill="var(--w11-color-warning)"
-      opacity="0.18"
-    />
-    <path
-      d="M12 1.5l9.526 5.5v11L12 23.5 2.474 18V7L12 1.5z"
-      stroke="var(--w11-color-warning)"
-      strokeWidth="1.4"
+      d="M12 2.2 20.2 7v10L12 21.8 3.8 17V7L12 2.2z"
+      fill="#f4c430"
+      stroke="#c9a000"
+      strokeWidth="0.7"
     />
     <text
       x="12"
-      y="16"
+      y="15.2"
       textAnchor="middle"
-      fontSize="11"
+      fontSize="9.5"
       fontWeight="800"
-      fill="var(--w11-color-warning)"
+      fill="#5c4a00"
       fontFamily="system-ui, sans-serif"
     >
       M

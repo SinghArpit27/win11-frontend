@@ -45,9 +45,11 @@ export const formatMatchTitle = (match: SportsMatchSummary): string =>
 export const formatTournamentTag = (
   match: Pick<SportsMatchSummary, 'tournament'>,
 ): string => {
-  const parts: string[] = [match.tournament.shortName || match.tournament.name];
-  if (match.tournament.season) parts.push(match.tournament.season);
-  return parts.filter(Boolean).join(', ');
+  const name = match.tournament.shortName || match.tournament.name;
+  const season = match.tournament.season?.trim();
+  if (!season) return name;
+  if (name.includes(season)) return name;
+  return `${name}, ${season}`;
 };
 
 /**
@@ -66,13 +68,28 @@ export interface MatchDayHint {
   tone: 'urgent' | 'soon' | 'later';
 }
 
-export const formatMatchDayHint = (iso: string): MatchDayHint | null => {
+export type MatchTimeStyle = 'countdown' | 'day-label';
+
+export const formatMatchDayHint = (
+  iso: string,
+  options?: { timeStyle?: MatchTimeStyle },
+): MatchDayHint | null => {
   const target = new Date(iso);
   if (Number.isNaN(target.getTime())) return null;
 
   const now = new Date();
   const diffMs = target.getTime() - now.getTime();
   if (diffMs <= 0) return null;
+
+  const startOfDay = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const dayDiff = Math.round(
+    (startOfDay(target).getTime() - startOfDay(now).getTime()) / (24 * 60 * 60 * 1000),
+  );
+
+  if (options?.timeStyle === 'day-label') {
+    if (dayDiff === 0) return { primary: 'Today', tone: 'soon' };
+    if (dayDiff === 1) return { primary: 'Tomorrow', tone: 'soon' };
+  }
 
   const seconds = Math.floor(diffMs / 1000);
   if (seconds < 3600) {
@@ -83,13 +100,9 @@ export const formatMatchDayHint = (iso: string): MatchDayHint | null => {
   if (seconds < 86_400) {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
-    return { primary: `${h}h ${m}m`, tone: 'urgent' };
+    return { primary: `${h}h : ${m}m`, tone: 'urgent' };
   }
 
-  const startOfDay = (d: Date): Date => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const dayDiff = Math.round(
-    (startOfDay(target).getTime() - startOfDay(now).getTime()) / (24 * 60 * 60 * 1000),
-  );
   if (dayDiff === 1) return { primary: 'Tomorrow', tone: 'soon' };
   if (dayDiff > 1 && dayDiff < 7) {
     return {
@@ -103,14 +116,16 @@ export const formatMatchDayHint = (iso: string): MatchDayHint | null => {
   };
 };
 
-/** Just the time portion, e.g. "7:30 PM". */
+/** Just the time portion, e.g. "6:00 PM". */
 export const formatMatchClock = (iso: string): string => {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
-  return new Intl.DateTimeFormat(appConfig.defaultLocale, {
+  const formatted = new Intl.DateTimeFormat(appConfig.defaultLocale, {
     hour: 'numeric',
     minute: '2-digit',
+    hour12: true,
   }).format(d);
+  return formatted.replace(/\s?(am|pm)$/i, (_, meridiem: string) => ` ${meridiem.toUpperCase()}`);
 };
 
 /**

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@constants/routes.constants';
 import { Typography } from '@components/ui';
 import { useAuth } from '@features/auth';
+import { resolveUserHandle, userAvatarInitials } from '@features/auth/auth.utils';
 import { NotificationBell, NotificationCenter } from '@features/notifications';
 import { cn } from '@utils/cn';
 
@@ -44,8 +45,8 @@ export const AppTopBar = ({ className }: AppTopBarProps): JSX.Element => {
   const [query, setQuery] = useState('');
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
-  const displayName = user?.displayName ?? user?.email ?? user?.phone ?? 'Player';
-  const initials = displayName.slice(0, 1).toUpperCase();
+  const handle = resolveUserHandle(user);
+  const initials = userAvatarInitials(user);
 
   const goToProfile = (): void => navigate(ROUTES.PROFILE);
 
@@ -80,7 +81,7 @@ export const AppTopBar = ({ className }: AppTopBarProps): JSX.Element => {
 
       {/* Right-side action group — the only three personal-account affordances. */}
       <div className="ml-auto flex items-center gap-2">
-        <WalletBalancePill className="hidden xs:inline-flex" />
+        <WalletBalancePill />
 
         <NotificationBell onClick={() => setNotificationsOpen(true)} />
         <NotificationCenter open={notificationsOpen} onOpenChange={setNotificationsOpen} />
@@ -105,7 +106,7 @@ export const AppTopBar = ({ className }: AppTopBarProps): JSX.Element => {
               Welcome back
             </Typography>
             <Typography variant="body" className="block truncate font-semibold leading-tight">
-              {displayName}
+              {handle}
             </Typography>
           </div>
         </button>

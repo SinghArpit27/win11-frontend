@@ -7,6 +7,9 @@ import type {
   ChangePasswordRequest,
   ForgotPasswordRequest,
   LoginRequest,
+  PhoneSendOtpRequest,
+  PhoneSendOtpResponse,
+  PhoneVerifyOtpRequest,
   RefreshRequest,
   RequestOtpRequest,
   ResetPasswordRequest,
@@ -66,6 +69,15 @@ export const authApi = baseApi.injectEndpoints({
       query: (body) => ({ url: '/auth/password/change', method: 'POST', body }),
     }),
 
+    phoneSendOtp: build.mutation<PhoneSendOtpResponse, PhoneSendOtpRequest>({
+      query: (body) => ({ url: '/auth/phone/send-otp', method: 'POST', body }),
+    }),
+
+    phoneVerifyOtp: build.mutation<AuthSuccessPayload, PhoneVerifyOtpRequest>({
+      query: (body) => ({ url: '/auth/phone/verify', method: 'POST', body }),
+      invalidatesTags: ['Me', 'Session'],
+    }),
+
     getMe: build.query<{ user: AuthUser }, void>({
       query: () => ({ url: '/users/me' }),
       providesTags: ['Me'],
@@ -96,6 +108,8 @@ export const {
   useResetPasswordMutation,
   useChangePasswordMutation,
   useGetMeQuery,
+  usePhoneSendOtpMutation,
+  usePhoneVerifyOtpMutation,
   useListMySessionsQuery,
   useRevokeMySessionMutation,
 } = authApi;

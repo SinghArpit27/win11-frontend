@@ -12,6 +12,8 @@ export const ROUTES = {
   SPLASH: '/splash',
   ONBOARDING: '/onboarding',
   LOGIN: '/auth/login',
+  /** Alias — phone OTP is the only sign-in method. */
+  PHONE_AUTH: '/auth/login',
   SIGNUP: '/auth/signup',
   FORGOT_PASSWORD: '/auth/forgot-password',
   RESET_PASSWORD: '/auth/reset-password',

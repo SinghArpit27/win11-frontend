@@ -1,11 +1,8 @@
-import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo, useState } from 'react';
 
 import { PageContainer } from '@components/layout';
-import { Typography } from '@components/ui';
-import { ROUTES } from '@constants/routes.constants';
-import { useAppSelector } from '@hooks/index';
-import { selectAuthUser } from '@features/auth/auth.slice';
+import { useListContestsQuery } from '@features/contests/contest.api';
+import { formatMegaPrizeLabel } from '@features/contests/contest.utils';
 
 import {
   useListFeaturedMatchesQuery,
@@ -13,127 +10,191 @@ import {
   useListTrendingMatchesQuery,
   useListUpcomingMatchesQuery,
 } from '../sports.api';
-import {
-  BannerCarousel,
-  MatchListSection,
-  WalletSummaryWidget,
-} from '../components';
+import type { SportsMatchSummary } from '../sports.types';
+import { HomeMatchTabs, type HomeMatchTab } from '../components/HomeMatchTabs';
+import { MatchCard } from '../components/MatchCard';
+import { useDream11Palette } from '../hooks/useDream11Palette';
+
+const TAB_TIME_STYLE: Record<HomeMatchTab, 'countdown' | 'day-label'> = {
+  recommended: 'countdown',
+  'starting-soon': 'countdown',
+  popular: 'day-label',
+};
 
 /**
- * Authenticated home dashboard.
+ * Authenticated home — Dream11-style tabbed match feed.
  *
- *  Composition order (mobile-first, also the visual scan order on desktop):
- *    1. Greeting + wallet summary widget (glance value)
- *    2. Promo banners placeholder (engagement)
- *    3. Live matches  (urgency / fomo)
- *    4. Upcoming matches (planning)
- *    5. Featured matches (curated quality)
- *    6. Trending matches (social proof)
+ *  Tabs:
+ *    - Recommended  → live + featured + upcoming fixtures
+ *    - Starting Soon → upcoming sorted by kick-off
+ *    - Popular      → trending fixtures
  *
- *  Each row delegates render+states to `MatchListSection`, which keeps
- *  this screen lean and lets us reuse the same row on dedicated screens.
- *
- *  Performance:
- *   - Each query is its own RTK Query cache key, so loading individual
- *     rows doesn't block the others (independent suspense).
- *   - Live row is the only one with a polling interval (matches API
- *     contract: live cache TTL is short, others are minutes-long).
+ *  Prize pools are aggregated from open contests per match.
  */
 const HomeScreen = (): JSX.Element => {
-  const navigate = useNavigate();
-  const user = useAppSelector(selectAuthUser);
+  const palette = useDream11Palette();
+  const [tab, setTab] = useState<HomeMatchTab>('recommended');
 
-  const liveQuery = useListLiveMatchesQuery(undefined, {
-    pollingInterval: 30_000,
-  });
-  const upcomingQuery = useListUpcomingMatchesQuery({ limit: 8 });
-  const featuredQuery = useListFeaturedMatchesQuery({ limit: 6 });
-  const trendingQuery = useListTrendingMatchesQuery({ limit: 6 });
+  const liveQuery = useListLiveMatchesQuery(undefined, { pollingInterval: 30_000 });
+  const upcomingQuery = useListUpcomingMatchesQuery({ limit: 20 });
+  const featuredQuery = useListFeaturedMatchesQuery({ limit: 20 });
+  const trendingQuery = useListTrendingMatchesQuery({ limit: 20 });
+  const contestsQuery = useListContestsQuery({ limit: 100 });
 
-  const greeting = useMemo(
-    () => greet(user?.displayName ?? user?.username ?? null),
-    [user?.displayName, user?.username],
+  const prizeByMatchId = useMemo(() => {
+    const map = new Map<string, { amount: number; currency: string }>();
+    for (const contest of contestsQuery.data?.items ?? []) {
+      const existing = map.get(contest.matchId);
+      if (!existing || contest.prizePoolAmount > existing.amount) {
+        map.set(contest.matchId, {
+          amount: contest.prizePoolAmount,
+          currency: contest.currency,
+        });
+      }
+    }
+    return map;
+  }, [contestsQuery.data]);
+
+  const matches = useMemo(
+    () => resolveTabMatches(tab, {
+      live: liveQuery.data,
+      featured: featuredQuery.data,
+      upcoming: upcomingQuery.data,
+      trending: trendingQuery.data,
+    }),
+    [tab, liveQuery.data, featuredQuery.data, upcomingQuery.data, trendingQuery.data],
   );
 
+  const loading = resolveTabLoading(tab, {
+    live: liveQuery.isLoading,
+    featured: featuredQuery.isLoading,
+    upcoming: upcomingQuery.isLoading,
+    trending: trendingQuery.isLoading,
+  });
+
   return (
-    <PageContainer as="div" className="gap-6 lg:gap-8">
-      <header className="flex flex-col gap-1">
-        <Typography variant="overline" tone="muted">
-          {greeting.eyebrow}
-        </Typography>
-        <Typography
-          variant="h1"
-          className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl"
-        >
-          {greeting.title}
-        </Typography>
-        <Typography variant="body" tone="muted">
-          Live action, upcoming fixtures, and your wallet — all in one place.
-        </Typography>
-      </header>
+    <PageContainer
+      as="main"
+      padded={false}
+      width="wide"
+      className="mx-0 min-h-full w-full max-w-none !px-0"
+      style={{ backgroundColor: palette.greyBg }}
+    >
+      <HomeMatchTabs active={tab} onChange={setTab} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
-        <WalletSummaryWidget className="lg:col-span-1" />
-        <BannerCarousel
-          className="lg:col-span-2"
-          onCta={(b) => {
-            if (b.id === 'safe') navigate(ROUTES.WALLET);
-            else navigate(ROUTES.MATCHES);
-          }}
-        />
+      <div className="flex flex-col gap-2 px-2 py-2">
+        {loading ? (
+          <>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-[130px] w-full animate-pulse rounded-[10px] border"
+                style={{
+                  borderColor: palette.border,
+                  backgroundColor: palette.card,
+                }}
+              />
+            ))}
+          </>
+        ) : null}
+
+        {!loading && matches.length === 0 ? (
+          <div
+            className="rounded-xl border border-dashed px-4 py-12 text-center"
+            style={{
+              borderColor: palette.border,
+              backgroundColor: palette.card,
+              color: palette.textMuted,
+            }}
+          >
+            <p className="text-sm">{emptyHintForTab(tab)}</p>
+          </div>
+        ) : null}
+
+        {!loading
+          ? matches.map((match) => {
+              const prize = prizeByMatchId.get(match.id);
+              return (
+                <MatchCard
+                  key={match.id}
+                  match={match}
+                  appearance="dream11"
+                  prizeLabel={
+                    prize ? formatMegaPrizeLabel(prize.amount, prize.currency) : null
+                  }
+                  timeStyle={TAB_TIME_STYLE[tab]}
+                />
+              );
+            })
+          : null}
       </div>
-
-      <MatchListSection
-        title="Live now"
-        subtitle="Matches in progress — tap to follow the action."
-        matches={liveQuery.data}
-        loading={liveQuery.isLoading}
-        emptyHint="No matches are live right now. Check back closer to fixture time."
-        onViewAll={() => navigate(`${ROUTES.MATCHES}?status=LIVE`)}
-      />
-
-      <MatchListSection
-        title="Upcoming"
-        subtitle="Fixtures starting soon."
-        matches={upcomingQuery.data}
-        loading={upcomingQuery.isLoading}
-        emptyHint="No upcoming matches in this window."
-        onViewAll={() => navigate(`${ROUTES.MATCHES}?status=UPCOMING`)}
-      />
-
-      <MatchListSection
-        title="Featured"
-        subtitle="Hand-picked marquee fixtures."
-        matches={featuredQuery.data}
-        loading={featuredQuery.isLoading}
-        emptyHint="Editorial picks will appear here closer to match day."
-        onViewAll={() => navigate(`${ROUTES.MATCHES}?featured=true`)}
-      />
-
-      <MatchListSection
-        title="Trending"
-        subtitle="Most-followed matches right now."
-        matches={trendingQuery.data}
-        loading={trendingQuery.isLoading}
-        compact
-        emptyHint="Nothing trending yet — be the first to follow a match."
-      />
     </PageContainer>
   );
 };
 
-/**
- *  Localised-style greeting helper. Kept pure so it stays trivially
- *  testable and easily replaced by a real i18n string at Phase 8.
- */
-const greet = (name: string | null): { eyebrow: string; title: string } => {
-  const hour = new Date().getHours();
-  const slot = hour < 5 ? 'evening' : hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
-  const firstName = name ? name.split(' ')[0] : null;
-  return {
-    eyebrow: `Good ${slot}`,
-    title: firstName ? `Hey, ${firstName}` : 'Welcome back',
-  };
+interface TabMatchSources {
+  live: SportsMatchSummary[] | undefined;
+  featured: SportsMatchSummary[] | undefined;
+  upcoming: SportsMatchSummary[] | undefined;
+  trending: SportsMatchSummary[] | undefined;
+}
+
+const resolveTabMatches = (
+  tab: HomeMatchTab,
+  sources: TabMatchSources,
+): SportsMatchSummary[] => {
+  switch (tab) {
+    case 'recommended': {
+      const live = sources.live ?? [];
+      const featured = sources.featured ?? [];
+      const upcoming = sources.upcoming ?? [];
+      const seen = new Set<string>();
+      const merged: SportsMatchSummary[] = [];
+      for (const match of [...live, ...featured, ...upcoming]) {
+        if (seen.has(match.id)) continue;
+        seen.add(match.id);
+        merged.push(match);
+      }
+      return merged;
+    }
+    case 'starting-soon':
+      return [...(sources.upcoming ?? [])].sort(
+        (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
+      );
+    case 'popular':
+      return sources.trending ?? [];
+    default:
+      return [];
+  }
+};
+
+const resolveTabLoading = (
+  tab: HomeMatchTab,
+  flags: { live: boolean; featured: boolean; upcoming: boolean; trending: boolean },
+): boolean => {
+  switch (tab) {
+    case 'recommended':
+      return flags.live || flags.featured || flags.upcoming;
+    case 'starting-soon':
+      return flags.upcoming;
+    case 'popular':
+      return flags.trending;
+    default:
+      return false;
+  }
+};
+
+const emptyHintForTab = (tab: HomeMatchTab): string => {
+  switch (tab) {
+    case 'recommended':
+      return 'No recommended matches right now. Check back closer to match day.';
+    case 'starting-soon':
+      return 'No fixtures starting soon.';
+    case 'popular':
+      return 'Nothing trending yet — be the first to follow a match.';
+    default:
+      return 'No matches to show.';
+  }
 };
 
 export default HomeScreen;

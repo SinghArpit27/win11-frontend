@@ -24,8 +24,8 @@ export interface ThemePreference {
   mode: ThemeMode;
 }
 
-const DEFAULT_THEME_ID: ThemeId = 'dark-fantasy';
-const DEFAULT_MODE: ThemeMode = 'dark';
+const DEFAULT_THEME_ID: ThemeId = 'light';
+const DEFAULT_MODE: ThemeMode = 'light';
 
 export class ThemeService {
   private mediaQuery: MediaQueryList | null = null;

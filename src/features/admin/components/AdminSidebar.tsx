@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { BrandMark } from '@components/layout';
 import { Button, Typography } from '@components/ui';
 import { useAuth } from '@features/auth';
+import { resolveUserHandle } from '@features/auth/auth.utils';
 import { cn } from '@utils/cn';
 
 import { ADMIN_NAV_ITEMS } from '../admin.navigation';
@@ -28,7 +29,7 @@ export const AdminSidebar = ({ open, onClose }: AdminSidebarProps): JSX.Element 
   const visibleItems = ADMIN_NAV_ITEMS.filter((item) =>
     item.allow.some((r) => roles.includes(r)),
   );
-  const displayName = user?.displayName ?? user?.email ?? user?.phone ?? 'Admin';
+  const handle = resolveUserHandle(user);
 
   return (
     <>
@@ -108,7 +109,7 @@ export const AdminSidebar = ({ open, onClose }: AdminSidebarProps): JSX.Element 
               Signed in as
             </Typography>
             <Typography variant="body" className="truncate font-semibold">
-              {displayName}
+              {handle}
             </Typography>
           </div>
           <Button

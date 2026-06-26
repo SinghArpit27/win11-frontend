@@ -63,10 +63,15 @@ export const LoginScreen = (): JSX.Element => {
       title="Welcome back"
       subtitle="Sign in to continue."
       footer={
-        <span>
-          New to {APP_NAME}?{' '}
-          <Link to={ROUTES.SIGNUP} className="text-primary hover:underline">
-            Create an account
+        <span className="flex flex-col gap-2">
+          <span>
+            New to {APP_NAME}?{' '}
+            <Link to={ROUTES.SIGNUP} className="text-primary hover:underline">
+              Create an account
+            </Link>
+          </span>
+          <Link to={ROUTES.PHONE_AUTH} className="text-primary hover:underline">
+            Sign in with mobile OTP
           </Link>
         </span>
       }

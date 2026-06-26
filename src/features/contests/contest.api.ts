@@ -4,13 +4,15 @@ import { toPaginatedResponseNullable } from '@store/api/pagination.helpers';
 import type { PaginationMeta } from '@shared/types/pagination.types';
 import { serialiseQuery } from '@utils/query';
 
-import type { ContestEntryStatus, ContestStatus, ContestType } from '@shared/enums';
+import type { ContestEntryStatus, ContestStatus, ContestType, ContestVisibility } from '@shared/enums';
 
 import type {
   Contest,
   ContestEntry,
   ContestJoinResult,
   ContestSummary,
+  ContestTemplate,
+  PrizeDistribution,
 } from './contest.types';
 
 /**
@@ -55,6 +57,61 @@ interface MyEntriesArgs {
   contestId?: string;
   matchId?: string;
   status?: ContestEntryStatus;
+  page?: number;
+  limit?: number;
+}
+
+interface AdminCreateContestBody {
+  matchId: string;
+  templateId?: string | null;
+  name: string;
+  description?: string | null;
+  type: ContestType;
+  visibility?: ContestVisibility;
+  entryFee: number;
+  prizePoolAmount: number;
+  currency: string;
+  totalSpots: number;
+  maxEntriesPerUser: number;
+  isGuaranteed?: boolean;
+  isPractice?: boolean;
+  prizeDistributionId?: string | null;
+  publishImmediately?: boolean;
+}
+
+interface AdminFromTemplateBody {
+  templateId: string;
+  matchIds: string[];
+  publishImmediately?: boolean;
+  skipExisting?: boolean;
+}
+
+interface AdminTemplateBody {
+  name: string;
+  description?: string | null;
+  type: ContestType;
+  visibility: ContestVisibility;
+  entryFee: number;
+  prizePoolAmount: number;
+  currency: string;
+  totalSpots: number;
+  maxEntriesPerUser: number;
+  isGuaranteed?: boolean;
+  prizeDistributionId?: string | null;
+  tags?: string[];
+  isActive?: boolean;
+}
+
+interface ListTemplatesArgs {
+  type?: ContestType;
+  isActive?: boolean;
+  q?: string;
+  page?: number;
+  limit?: number;
+}
+
+interface ListPrizeDistributionsArgs {
+  isActive?: boolean;
   page?: number;
   limit?: number;
 }
@@ -156,6 +213,108 @@ export const contestApi = baseApi.injectEndpoints({
             ]
           : [{ type: 'Contest', id: 'ADMIN:LIST' }],
     }),
+
+    adminGetContest: build.query<Contest, { contestId: string }>({
+      query: ({ contestId }) => ({ url: `/contests/admin/contests/${contestId}` }),
+      providesTags: (_res, _err, arg) => [{ type: 'Contest', id: arg.contestId }],
+    }),
+
+    adminCreateContest: build.mutation<Contest, AdminCreateContestBody>({
+      query: (body) => ({
+        url: '/contests/admin/contests',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Contest', id: 'ADMIN:LIST' }, { type: 'Contest', id: 'LIST' }],
+    }),
+
+    adminCreateContestsFromTemplate: build.mutation<
+      { items: ContestSummary[]; skippedMatchIds: string[] },
+      AdminFromTemplateBody
+    >({
+      query: (body) => ({
+        url: '/contests/admin/contests/from-template',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'Contest', id: 'ADMIN:LIST' }, { type: 'Contest', id: 'LIST' }],
+    }),
+
+    adminTransitionContestStatus: build.mutation<
+      ContestSummary,
+      { contestId: string; status: ContestStatus }
+    >({
+      query: ({ contestId, status }) => ({
+        url: `/contests/admin/contests/${contestId}/status`,
+        method: 'POST',
+        body: { status },
+      }),
+      invalidatesTags: (_res, _err, arg) => [
+        { type: 'Contest', id: 'ADMIN:LIST' },
+        { type: 'Contest', id: arg.contestId },
+      ],
+    }),
+
+    adminListTemplates: build.query<ListResponse<ContestTemplate>, ListTemplatesArgs | void>({
+      query: (args) => ({
+        url: '/contests/admin/templates',
+        params: serialiseQuery(args ?? {}),
+      }),
+      transformResponse: (data: ContestTemplate[], meta) =>
+        toPaginatedResponseNullable(data, meta),
+      providesTags: (res) =>
+        res
+          ? [
+              { type: 'ContestTemplate' as const, id: 'ADMIN:LIST' },
+              ...res.items.map((t) => ({ type: 'ContestTemplate' as const, id: t.id })),
+            ]
+          : [{ type: 'ContestTemplate', id: 'ADMIN:LIST' }],
+    }),
+
+    adminCreateTemplate: build.mutation<ContestTemplate, AdminTemplateBody>({
+      query: (body) => ({
+        url: '/contests/admin/templates',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: [{ type: 'ContestTemplate', id: 'ADMIN:LIST' }],
+    }),
+
+    adminUpdateTemplate: build.mutation<
+      ContestTemplate,
+      { templateId: string; body: Partial<AdminTemplateBody> }
+    >({
+      query: ({ templateId, body }) => ({
+        url: `/contests/admin/templates/${templateId}`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: (_res, _err, arg) => [
+        { type: 'ContestTemplate', id: 'ADMIN:LIST' },
+        { type: 'ContestTemplate', id: arg.templateId },
+      ],
+    }),
+
+    adminDeleteTemplate: build.mutation<void, { templateId: string }>({
+      query: ({ templateId }) => ({
+        url: `/contests/admin/templates/${templateId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'ContestTemplate', id: 'ADMIN:LIST' }],
+    }),
+
+    adminListPrizeDistributions: build.query<
+      ListResponse<PrizeDistribution>,
+      ListPrizeDistributionsArgs | void
+    >({
+      query: (args) => ({
+        url: '/contests/admin/prize-distributions',
+        params: serialiseQuery(args ?? {}),
+      }),
+      transformResponse: (data: PrizeDistribution[], meta) =>
+        toPaginatedResponseNullable(data, meta),
+      providesTags: [{ type: 'ContestTemplate', id: 'PRIZES' }],
+    }),
   }),
   overrideExisting: false,
 });
@@ -169,4 +328,13 @@ export const {
   useGetMyContestEntryQuery,
   useListMyEntriesForContestQuery,
   useAdminListContestsQuery,
+  useAdminGetContestQuery,
+  useAdminCreateContestMutation,
+  useAdminCreateContestsFromTemplateMutation,
+  useAdminTransitionContestStatusMutation,
+  useAdminListTemplatesQuery,
+  useAdminCreateTemplateMutation,
+  useAdminUpdateTemplateMutation,
+  useAdminDeleteTemplateMutation,
+  useAdminListPrizeDistributionsQuery,
 } = contestApi;

@@ -14,11 +14,12 @@ interface TeamBadgeProps {
   name?: string;
   logoUrl?: string | null;
   primaryColor?: string | null;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
 const SIZE_CLASS: Record<NonNullable<TeamBadgeProps['size']>, string> = {
+  xs: 'h-7 w-7 text-[8px]',
   sm: 'h-8 w-8 text-[10px]',
   md: 'h-12 w-12 text-xs',
   lg: 'h-16 w-16 text-sm',

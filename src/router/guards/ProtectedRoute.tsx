@@ -6,8 +6,8 @@ import { selectIsAuthenticated } from '@features/auth/auth.slice';
 
 /**
  * Guards a sub-tree behind authentication. Unauthenticated callers are
- * redirected to `/auth/login` with the original path stashed in
- * `location.state.from` so the login screen can bounce them back.
+ * redirected to `/splash` (landing) with the original path stashed in
+ * `location.state.from` so login can bounce them back afterward.
  */
 export const ProtectedRoute = (): JSX.Element => {
   const location = useLocation();
@@ -16,7 +16,7 @@ export const ProtectedRoute = (): JSX.Element => {
   if (!isAuthenticated) {
     return (
       <Navigate
-        to={ROUTES.LOGIN}
+        to={ROUTES.SPLASH}
         replace
         state={{ from: `${location.pathname}${location.search}` }}
       />

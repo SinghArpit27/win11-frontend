@@ -37,10 +37,24 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 5173,
       strictPort: false,
+      // Proxy API to the backend so LAN/mobile dev hits the same origin (5173)
+      // instead of `localhost:4000` on the phone itself.
+      proxy: {
+        '/api': {
+          target: 'http://127.0.0.1:4000',
+          changeOrigin: true,
+        },
+      },
     },
     preview: {
       host: true,
       port: 4173,
+      proxy: {
+        '/api': {
+          target: 'http://127.0.0.1:4000',
+          changeOrigin: true,
+        },
+      },
     },
     build: {
       target: 'es2022',

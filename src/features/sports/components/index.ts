@@ -1,4 +1,6 @@
 export { BannerCarousel } from './BannerCarousel';
+export { HomeMatchTabs } from './HomeMatchTabs';
+export type { HomeMatchTab } from './HomeMatchTabs';
 export { LiveBadge } from './LiveBadge';
 export { MatchCard } from './MatchCard';
 export { MatchCategoryChips } from './MatchCategoryChips';

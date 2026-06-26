@@ -18,12 +18,11 @@ const FantasyFlowShellComponent = ({
   withFooter = false,
   className,
 }: FantasyFlowShellProps): JSX.Element => (
-  <div className="min-h-dvh bg-bg">
+  <div className="flex min-h-0 flex-1 flex-col bg-bg">
     <div
       className={cn(
-        'relative mx-auto flex min-h-dvh w-full max-w-[420px] flex-col bg-surface text-text',
-        'shadow-[0_0_40px_rgba(0,0,0,0.25)] sm:max-w-md',
-        withFooter && 'pb-28',
+        'relative flex min-h-0 w-full flex-1 flex-col bg-surface text-text',
+        withFooter && 'pb-24',
         className,
       )}
     >
@@ -46,7 +45,7 @@ const FantasyStickyFooterComponent = ({
 }: FantasyStickyFooterProps): JSX.Element => (
   <div
     className={cn(
-      'fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[420px] sm:max-w-md',
+      'fixed inset-x-0 bottom-0 z-40 w-full',
       'border-t border-border bg-surface/95 px-3 py-2.5 safe-pb backdrop-blur-md',
       'shadow-[0_-8px_24px_rgba(0,0,0,0.12)]',
       className,

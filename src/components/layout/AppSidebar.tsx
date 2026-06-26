@@ -4,6 +4,7 @@ import { NavLink } from 'react-router-dom';
 import { Button, Typography } from '@components/ui';
 import { USER_NAV_ITEMS } from '@constants/navigation.constants';
 import { useAuth } from '@features/auth';
+import { resolveUserHandle } from '@features/auth/auth.utils';
 import { cn } from '@utils/cn';
 
 import { BrandMark } from './BrandMark';
@@ -26,7 +27,7 @@ interface AppSidebarProps {
  */
 export const AppSidebar = ({ className }: AppSidebarProps): JSX.Element => {
   const { user, logout, flags } = useAuth();
-  const displayName = user?.displayName ?? user?.email ?? user?.phone ?? 'Player';
+  const handle = resolveUserHandle(user);
 
   return (
     <aside
@@ -80,7 +81,7 @@ export const AppSidebar = ({ className }: AppSidebarProps): JSX.Element => {
             Signed in as
           </Typography>
           <Typography variant="body" className="truncate font-semibold">
-            {displayName}
+            {handle}
           </Typography>
         </div>
         <Button

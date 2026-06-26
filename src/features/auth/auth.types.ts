@@ -77,6 +77,21 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+export interface PhoneSendOtpRequest {
+  phone: string;
+}
+
+export interface PhoneSendOtpResponse {
+  accepted: true;
+  expiresAt: string;
+  isExistingUser: boolean;
+}
+
+export interface PhoneVerifyOtpRequest {
+  phone: string;
+  code: string;
+}
+
 export interface SessionSummary {
   id: string;
   platform: string;

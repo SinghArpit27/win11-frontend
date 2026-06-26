@@ -1,11 +1,11 @@
 import { ArrowLeft, Check, Plus, Wallet as WalletIcon } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { Button, Card, Skeleton, Typography } from '@components/ui';
 import { QueryErrorState } from '@components/common/QueryErrorState';
 import { ROUTES } from '@constants/routes.constants';
-import { buildRoute } from '@utils/routes.util';
+import { buildCreateTeamRoute, buildRoute } from '@utils/routes.util';
 import { cn } from '@utils/cn';
 
 import { useListMyFantasyTeamsQuery } from '@features/fantasy/fantasy.api';
@@ -49,6 +49,13 @@ const JoinContestScreen = (): JSX.Element => {
   const contest = detailQuery.data;
   const teams = teamsQuery.data?.items ?? [];
 
+  /** No team yet → Dream11 sends user straight to player selection. */
+  useEffect(() => {
+    if (!matchId || !contestId || teamsQuery.isLoading) return;
+    if (teams.length > 0) return;
+    navigate(buildCreateTeamRoute(matchId, { contestId }), { replace: true });
+  }, [matchId, contestId, teams.length, teamsQuery.isLoading, navigate]);
+
   /** Set of team ids already used for this contest. */
   const usedTeamIds = useMemo<Set<string>>(
     () => new Set((entriesQuery.data ?? []).map((e) => e.teamId)),
@@ -82,7 +89,12 @@ const JoinContestScreen = (): JSX.Element => {
     );
   }
 
-  if (detailQuery.isLoading || !contest) {
+  if (
+    detailQuery.isLoading ||
+    !contest ||
+    teamsQuery.isLoading ||
+    teams.length === 0
+  ) {
     return (
       <div className="flex flex-col gap-3 p-3">
         <Skeleton className="h-12 w-2/3" />
@@ -161,16 +173,7 @@ const JoinContestScreen = (): JSX.Element => {
 
       {/* Team list */}
       <div className="flex flex-col gap-2 px-3">
-        {teamsQuery.isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full rounded-2xl" />
-          ))
-        ) : teams.length === 0 ? (
-          <EmptyTeams onCreate={() =>
-            navigate(buildRoute(ROUTES.FANTASY_CREATE_TEAM, { matchId }))
-          } />
-        ) : (
-          teams.map((team) => {
+        {teams.map((team) => {
             const isUsed = usedTeamIds.has(team.id);
             const isSelected = selectedTeamId === team.id;
             const disabled = isUsed || !canSelectMore;
@@ -220,15 +223,14 @@ const JoinContestScreen = (): JSX.Element => {
                 )}
               </button>
             );
-          })
-        )}
+          })}
 
-        {teams.length > 0 && canSelectMore && (
+        {canSelectMore && (
           <Button
             variant="ghost"
             leftIcon={<Plus className="h-4 w-4" />}
             onClick={() =>
-              navigate(buildRoute(ROUTES.FANTASY_CREATE_TEAM, { matchId }))
+              navigate(buildCreateTeamRoute(matchId, { contestId }))
             }
             className="mt-1"
           >
@@ -269,25 +271,6 @@ const JoinContestScreen = (): JSX.Element => {
     </div>
   );
 };
-
-const EmptyTeams = ({ onCreate }: { onCreate: () => void }): JSX.Element => (
-  <Card padding="xl" className="border-dashed text-center">
-    <Typography variant="h3" className="block">
-      Create a team first
-    </Typography>
-    <Typography variant="caption" tone="muted" className="mt-1 block">
-      You need at least one fantasy team for this match before you can join a contest.
-    </Typography>
-    <Button
-      variant="primary"
-      onClick={onCreate}
-      className="mt-3"
-      leftIcon={<Plus className="h-4 w-4" />}
-    >
-      Create team
-    </Button>
-  </Card>
-);
 
 export { JoinContestScreen };
 export default JoinContestScreen;

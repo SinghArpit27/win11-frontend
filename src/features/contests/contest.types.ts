@@ -114,6 +114,7 @@ export interface ContestSummary {
   joinClosesAt: string | null;
   publishedAt: string | null;
   hasInviteCode: boolean;
+  templateId: string | null;
   version: number;
   createdAt: string;
   updatedAt: string;
@@ -123,7 +124,6 @@ export interface Contest extends ContestSummary {
   cancelledAt: string | null;
   cancellationReason: string | null;
   prizeSnapshot: ContestPrizeSnapshot;
-  templateId: string | null;
   clonedFromId: string | null;
   match: ContestMatchSummary | null;
   myActiveEntryCount: number | null;

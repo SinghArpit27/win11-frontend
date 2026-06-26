@@ -30,6 +30,9 @@ export interface FantasyMatchHeaderProps {
   rightSlot?: React.ReactNode;
   selectedCount?: number;
   requiredCount?: number;
+  /** Per-team pick counts — replaces the live score band when provided. */
+  homePickCount?: number;
+  awayPickCount?: number;
   onClearSelection?: () => void;
   /** Hide the score row + progress bar (used by the captain header). */
   compact?: boolean;
@@ -47,6 +50,8 @@ const FantasyMatchHeaderComponent = ({
   rightSlot,
   selectedCount,
   requiredCount,
+  homePickCount,
+  awayPickCount,
   onClearSelection,
   compact,
   className,
@@ -100,7 +105,7 @@ const FantasyMatchHeaderComponent = ({
           )}
         </div>
 
-        {/* Row 2 — score band */}
+        {/* Row 2 — team pick counts or live score */}
         {!compact && home && away ? (
           <div className="mt-2.5 flex items-center justify-center gap-3">
             <TeamSideBlock
@@ -110,9 +115,19 @@ const FantasyMatchHeaderComponent = ({
               align="end"
             />
             <span className="text-[18px] font-bold tabular-nums leading-none">
-              {homeScore?.score ?? 0}
-              <span className="mx-1 text-white/60">-</span>
-              {awayScore?.score ?? 0}
+              {typeof homePickCount === 'number' && typeof awayPickCount === 'number' ? (
+                <>
+                  {homePickCount}
+                  <span className="mx-1.5 text-white/60">-</span>
+                  {awayPickCount}
+                </>
+              ) : (
+                <>
+                  {homeScore?.score ?? 0}
+                  <span className="mx-1 text-white/60">-</span>
+                  {awayScore?.score ?? 0}
+                </>
+              )}
             </span>
             <TeamSideBlock
               short={away.shortName}
@@ -130,7 +145,7 @@ const FantasyMatchHeaderComponent = ({
               {selectedCount}/{requiredCount}
             </span>
             <div
-              className="flex h-1 flex-1 items-center gap-[3px]"
+              className="flex h-2 flex-1 items-center gap-[2px]"
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={requiredCount}
@@ -140,8 +155,8 @@ const FantasyMatchHeaderComponent = ({
                 <span
                   key={i}
                   className={cn(
-                    'h-1 flex-1 rounded-full transition-colors',
-                    i < selectedCount ? 'bg-[#e63946]' : 'bg-white/15',
+                    'h-2 flex-1 -skew-x-12 transition-colors',
+                    i < selectedCount ? 'bg-[#43a047]' : 'bg-white/20',
                   )}
                 />
               ))}
