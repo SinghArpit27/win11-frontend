@@ -33,6 +33,8 @@ export interface LeaderboardRow {
   movement: RankMovement;
   previousRank: number | null;
   isSelf: boolean;
+  /** Team slot label — T1, T2, … */
+  entryNumber: number;
 }
 
 export interface LeaderboardMeta {

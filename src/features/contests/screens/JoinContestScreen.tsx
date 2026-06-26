@@ -67,6 +67,20 @@ const JoinContestScreen = (): JSX.Element => {
   const canSelectMore =
     remainingEntries > 0 && contest && canJoinContest(contest);
 
+  const selectableTeams = useMemo(
+    () => teams.filter((t) => !usedTeamIds.has(t.id) && canSelectMore),
+    [teams, usedTeamIds, canSelectMore],
+  );
+
+  /** Single team available — skip picker and show confirmation modal (Come-style). */
+  useEffect(() => {
+    if (!contest || teamsQuery.isLoading || entriesQuery.isLoading) return;
+    if (selectableTeams.length !== 1) return;
+    const onlyTeam = selectableTeams[0]!;
+    setSelectedTeamId(onlyTeam.id);
+    setModalOpen(true);
+  }, [contest, teamsQuery.isLoading, entriesQuery.isLoading, selectableTeams]);
+
   const handleConfirm = useCallback(() => {
     if (!selectedTeamId) return;
     setModalOpen(true);
@@ -75,8 +89,8 @@ const JoinContestScreen = (): JSX.Element => {
   const handleSuccess = useCallback(() => {
     setModalOpen(false);
     setSelectedTeamId(null);
-    navigate(ROUTES.MY_CONTESTS);
-  }, [navigate]);
+    navigate(buildRoute(ROUTES.MATCH_CONTESTS, { matchId }));
+  }, [navigate, matchId]);
 
   if (detailQuery.isError) {
     return (

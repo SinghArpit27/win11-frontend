@@ -127,7 +127,7 @@ const MyTeamsScreen = (): JSX.Element => {
       {/* Tab strip with Teams (n) active */}
       <div className="flex items-center gap-1 overflow-x-auto border-b border-border bg-surface px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <SectionTab label="Contests" />
-        <SectionTab label="My Contests" />
+        <SectionTab label="My Matches" />
         <SectionTab label={`Teams (${teams.length})`} active />
         <SectionTab label="Stats" />
       </div>

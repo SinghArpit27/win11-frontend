@@ -28,14 +28,14 @@ const AbHexIcon = (): JSX.Element => (
   </svg>
 );
 
-/** Dream11 poll card — compact, grey question text, team pills. */
+/** Come-style poll — green-bordered team pills with flag logos. */
 export const MatchWinPoll = ({ match, className }: MatchWinPollProps): JSX.Element => {
   const palette = useDream11Palette();
   const [pick, setPick] = useState<'home' | 'away' | null>(null);
 
   return (
     <section
-      className={cn('mx-2 mt-2 mb-3 rounded-lg border px-2.5 py-1.5', className)}
+      className={cn('mx-2 mt-2 mb-3 rounded-lg border px-2.5 py-2', className)}
       style={{
         borderColor: palette.border,
         backgroundColor: palette.card,
@@ -56,7 +56,7 @@ export const MatchWinPoll = ({ match, className }: MatchWinPollProps): JSX.Eleme
         />
       </div>
 
-      <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <PollTeamButton
           selected={pick === 'home'}
           shortName={match.homeTeam.shortName}
@@ -97,8 +97,8 @@ const PollTeamButton = ({
     type="button"
     onClick={onClick}
     className={cn(
-      'flex h-8 w-full items-center justify-center gap-1.5 rounded-md border bg-white',
-      selected ? 'border-[#2e7d32] bg-[#fafdfa]' : 'border-[#e0e0e0]',
+      'flex h-9 w-full items-center justify-center gap-2 rounded-lg border-2 bg-white px-2 transition-colors',
+      selected ? 'border-[#2e7d32] bg-[#f6fbf6]' : 'border-[#2e7d32]',
     )}
   >
     <TeamBadge
@@ -107,7 +107,7 @@ const PollTeamButton = ({
       logoUrl={logoUrl}
       primaryColor={primaryColor}
       size="xs"
-      className="!h-5 !w-5 !text-[6px] ring-0"
+      className="!h-6 !w-6 !text-[7px] ring-0"
     />
     <span className="text-[12px] font-bold leading-none text-[#000000]">{shortName}</span>
   </button>

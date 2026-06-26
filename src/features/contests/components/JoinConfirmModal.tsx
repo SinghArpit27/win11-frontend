@@ -1,14 +1,10 @@
-import { AlertTriangle, CheckCircle2, Sparkles, Wallet as WalletIcon } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Sparkles, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   Button,
   Modal,
   ModalContent,
-  ModalDescription,
-  ModalFooter,
-  ModalHeader,
-  ModalTitle,
   Typography,
 } from '@components/ui';
 import { useGetMyWalletQuery } from '@features/wallet/wallet.api';
@@ -30,14 +26,7 @@ interface JoinConfirmModalProps {
 }
 
 /**
- * Join confirmation flow.
- *
- *   Phase 1 — confirmation     : breakdown of entry fee vs balance, T&Cs.
- *   Phase 2 — success screen   : entry id + cta to view my contests.
- *
- *  The mutation is fired exactly once per (contest, team, idempotencyKey)
- *  triple. The key is generated when the modal opens so a double-tap or a
- *  retry collapses to a single ledger entry on the backend.
+ * Come-style join confirmation — overlay on contest hub after team save.
  */
 export const JoinConfirmModal = ({
   open,
@@ -50,9 +39,6 @@ export const JoinConfirmModal = ({
   const walletQuery = useGetMyWalletQuery(undefined, { skip: !open });
   const [join, joinState] = useJoinContestMutation();
 
-  // Lazily generated and pinned to the lifetime of the open modal so a
-  // double-tap (or a remount mid-network) still hits the same idempotency
-  // key on the server.
   const [idempotencyKey, setIdempotencyKey] = useState<string>('');
   useEffect(() => {
     if (open) {
@@ -70,6 +56,7 @@ export const JoinConfirmModal = ({
   const free = contest ? isFreeContest(contest) : false;
   const insufficient = !free && spendable < entryFee;
   const shortfall = insufficient ? entryFee - spendable : 0;
+  const payLabel = free ? 'FREE' : formatMoney(entryFee, { currency });
 
   const errorMessage = useMemo<string | null>(() => {
     if (!joinState.error) return null;
@@ -95,7 +82,7 @@ export const JoinConfirmModal = ({
 
   return (
     <Modal open={open} onOpenChange={onOpenChange}>
-      <ModalContent className="gap-3 sm:gap-4">
+      <ModalContent showClose={false} className="gap-0 px-0 pb-0 pt-0 md:px-0 md:pb-0 md:pt-0">
         {success ? (
           <SuccessBody
             entryFee={entryFee}
@@ -104,32 +91,37 @@ export const JoinConfirmModal = ({
             onClose={() => onOpenChange(false)}
           />
         ) : (
-          <>
-            <ModalHeader>
-              <ModalTitle>Join {contest.name}</ModalTitle>
-              <ModalDescription>
-                Confirm your entry — this debits your wallet immediately.
-              </ModalDescription>
-            </ModalHeader>
+          <div className="flex flex-col">
+            <div className="relative border-b border-[#eeeeee] px-4 pb-4 pt-5">
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                aria-label="Close"
+                className="absolute left-3 top-3 rounded-full p-2 text-[#757575] hover:bg-[#f5f5f5]"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <Typography
+                variant="body"
+                className="block text-center text-[16px] font-bold text-[#000000]"
+              >
+                Confirmation
+              </Typography>
+              <Typography
+                variant="caption"
+                className="mt-1 block text-center text-[13px] text-[#757575]"
+              >
+                Your balance: {formatMoney(spendable, { currency })}
+              </Typography>
+            </div>
 
-            <div className="rounded-xl border border-border bg-surface">
-              <Row
-                label="Entry fee"
-                value={free ? 'FREE' : formatMoney(entryFee, { currency })}
-              />
-              <Row
-                label="Wallet balance"
-                value={formatMoney(spendable, { currency })}
-              />
-              <Row
-                label={free ? 'You pay' : 'Debit from wallet'}
-                value={free ? 'FREE' : formatMoney(entryFee, { currency })}
-                emphasis
-              />
+            <div className="px-4 py-2">
+              <ConfirmRow label="Entry" value={payLabel} />
+              <ConfirmRow label="To Pay" value={payLabel} emphasis />
             </div>
 
             {insufficient && (
-              <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-warning">
+              <div className="mx-4 mb-2 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-warning">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 <Typography variant="caption" className="text-xs font-medium">
                   Add {formatMoney(shortfall, { currency })} to your wallet to join this contest.
@@ -138,7 +130,7 @@ export const JoinConfirmModal = ({
             )}
 
             {errorMessage && (
-              <div className="flex items-start gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-danger">
+              <div className="mx-4 mb-2 flex items-start gap-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-danger">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                 <Typography variant="caption" className="text-xs font-medium">
                   {errorMessage}
@@ -146,36 +138,29 @@ export const JoinConfirmModal = ({
               </div>
             )}
 
-            <ModalFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                disabled={joinState.isLoading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="primary"
+            <div className="border-t border-[#eeeeee] px-4 py-4 pb-[max(env(safe-area-inset-bottom),16px)]">
+              <button
+                type="button"
                 onClick={handleConfirm}
-                loading={joinState.isLoading}
                 disabled={joinState.isLoading || insufficient || !teamId}
-                leftIcon={<WalletIcon className="h-4 w-4" />}
+                className={cn(
+                  'w-full rounded-md py-3.5 text-[14px] font-bold uppercase tracking-wide text-white transition-opacity',
+                  joinState.isLoading || insufficient || !teamId
+                    ? 'cursor-not-allowed bg-[#9e9e9e]'
+                    : 'bg-[#1fa444] hover:opacity-95',
+                )}
               >
-                {free
-                  ? 'Confirm Join'
-                  : `Pay ${formatMoney(entryFee, { currency })} & Join`}
-              </Button>
-            </ModalFooter>
-          </>
+                {joinState.isLoading ? 'Joining…' : 'Join Contest'}
+              </button>
+            </div>
+          </div>
         )}
       </ModalContent>
     </Modal>
   );
 };
 
-// ─── Pieces ────────────────────────────────────────────────────────────
-
-const Row = ({
+const ConfirmRow = ({
   label,
   value,
   emphasis = false,
@@ -184,20 +169,21 @@ const Row = ({
   value: string;
   emphasis?: boolean;
 }): JSX.Element => (
-  <div
-    className={cn(
-      'flex items-center justify-between gap-3 border-b border-border px-3 py-2.5 last:border-0',
-      emphasis && 'bg-bg-elevated/40',
-    )}
-  >
-    <Typography variant="caption" tone="muted" className="text-xs">
+  <div className="flex items-center justify-between gap-3 py-3">
+    <Typography
+      variant="body"
+      className={cn(
+        'text-[14px]',
+        emphasis ? 'font-bold text-[#000000]' : 'font-normal text-[#424242]',
+      )}
+    >
       {label}
     </Typography>
     <Typography
       variant="body"
       className={cn(
-        'text-sm font-semibold tabular-nums',
-        emphasis && 'text-base font-extrabold',
+        'tabular-nums text-[14px] text-[#000000]',
+        emphasis ? 'font-bold' : 'font-semibold',
       )}
     >
       {value}
@@ -216,7 +202,7 @@ const SuccessBody = ({
   contestName: string;
   onClose: () => void;
 }): JSX.Element => (
-  <div className="flex flex-col items-center gap-3 py-3 text-center">
+  <div className="flex flex-col items-center gap-3 px-4 py-6 text-center">
     <div className="relative">
       <CheckCircle2 className="h-14 w-14 text-success" aria-hidden />
       <Sparkles
@@ -225,10 +211,10 @@ const SuccessBody = ({
       />
     </div>
     <Typography variant="h3" className="block font-extrabold">
-      You're in!
+      You&apos;re in!
     </Typography>
     <Typography variant="caption" tone="muted" className="block max-w-xs text-sm">
-      You've joined <strong>{contestName}</strong>
+      You&apos;ve joined <strong>{contestName}</strong>
       {entryFee > 0 && (
         <>
           {' '}

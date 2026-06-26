@@ -72,6 +72,69 @@ interface SettleArgs {
   force?: boolean;
 }
 
+/** Wire shape from `GET /leaderboard/contests/:id`. */
+interface WireLeaderboardPage {
+  scope: LeaderboardPage['meta']['scope'];
+  scopeId: string;
+  page: number;
+  pageSize: number;
+  totalEntries: number;
+  topScore: number;
+  isFinal: boolean;
+  currency: string | null;
+  rows: Array<{
+    rank: number;
+    entryId: string;
+    userId: string;
+    teamId: string;
+    displayName: string;
+    avatarUrl: string | null;
+    points: number;
+    movement: LeaderboardPage['rows'][number]['movement'];
+    rankDelta: number;
+    pointsDelta: number;
+    projectedWinning: number | null;
+    isCurrentUser: boolean;
+    entryNumber?: number;
+    badge: string | null;
+  }>;
+}
+
+const mapLeaderboardPage = (data: WireLeaderboardPage): LeaderboardPage => {
+  const pageSize = data.pageSize || 25;
+  const totalPages = Math.max(1, Math.ceil(data.totalEntries / pageSize));
+  return {
+    meta: {
+      scope: data.scope,
+      scopeId: data.scopeId,
+      matchId: null,
+      totalEntries: data.totalEntries,
+      topScore: data.topScore,
+      lastSnapshotAt: null,
+    },
+    rows: data.rows.map((row) => ({
+      rank: row.rank,
+      entryId: row.entryId,
+      userId: row.userId,
+      username: null,
+      displayName: row.displayName,
+      avatarUrl: row.avatarUrl,
+      fantasyTeamId: row.teamId,
+      fantasyTeamName: null,
+      points: row.points,
+      winningAmount: row.projectedWinning,
+      movement: row.movement,
+      previousRank: row.rankDelta !== 0 ? row.rank + row.rankDelta : null,
+      isSelf: row.isCurrentUser,
+      entryNumber: row.entryNumber ?? 1,
+    })),
+    page: data.page,
+    pageSize,
+    totalPages,
+    hasMore: data.page < totalPages,
+  };
+};
+
 export const leaderboardApi = baseApi.injectEndpoints({
   endpoints: (build) => ({
     // ── USER ROUTES ──────────────────────────────────────────────────
@@ -81,6 +144,7 @@ export const leaderboardApi = baseApi.injectEndpoints({
         url: `/leaderboard/contests/${contestId}`,
         params: serialiseQuery({ page, limit }),
       }),
+      transformResponse: (data: WireLeaderboardPage) => mapLeaderboardPage(data),
       providesTags: (_res, _err, arg) => [
         { type: 'Leaderboard', id: `LIST:${arg.contestId}` },
       ],
